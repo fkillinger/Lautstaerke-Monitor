@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1D9E75">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Lautstärke">
+  <title>Lautstärke-Monitor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #1D9E75;
+      --green-light: #E1F5EE;
+      --green-dark: #0F6E56;
+      --amber: #EF9F27;
+      --red: #E24B4A;
+      --red-light: #FCEBEB;
+      --red-mid: #F09595;
+      --red-dark: #A32D2D;
+      --bg: #F5F4F0;
+      --card: #FFFFFF;
+      --border: rgba(0,0,0,0.12);
+      --text: #1a1a18;
+      --text-muted: #666660;
+      --text-hint: #999993;
+      --radius: 14px;
+      --radius-md: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a18;
+        --card: #262624;
+        --border: rgba(255,255,255,0.10);
+        --text: #F0EFE8;
+        --text-muted: #9A9990;
+        --text-hint: #66665E;
+        --green-light: #04342C;
+        --red-light: #501313;
+        --red-mid: #791F1F;
+        --red-dark: #F09595;
+        --green-dark: #9FE1CB;
+      }
+    }
+
+    html, body {
+      min-height: 100%;
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem 3rem;
+      gap: 0;
+      transition: background 0.3s;
+    }
+
+    body.alarm-flash {
+      background: var(--red-light) !important;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 0.2rem;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .alert-banner {
+      width: 100%;
+      max-width: 360px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      background: var(--red-light);
+      color: var(--red-dark);
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 1rem;
+      border: 1px solid var(--red-mid);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+
+    .alert-banner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .meter-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .db-display {
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .db-value {
+      font-size: 64px;
+      font-weight: 600;
+      line-height: 1;
+      transition: color 0.15s;
+      letter-spacing: -2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .db-unit {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .bar-bg {
+      width: 100%;
+      height: 30px;
+      background: var(--bg);
+      border-radius: 15px;
+      overflow: hidden;
+      position: relative;
+      border: 0.5px solid var(--border);
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 15px;
+      width: 0%;
+      transition: width 0.08s ease-out, background 0.15s;
+      background: var(--green);
+    }
+
+    .threshold-marker {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background: var(--red);
+      opacity: 0.85;
+      pointer-events: none;
+      border-radius: 1px;
+    }
+
+    .bar-zone-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--text-hint);
+      padding: 0 2px;
+    }
+
+    .status-badge-wrap {
+      margin-top: 14px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 18px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .badge.idle { background: var(--bg); color: var(--text-muted); }
+    .badge.ok { background: var(--green-light); color: var(--green-dark); }
+    .badge.warn { background: var(--red-light); color: var(--red-dark); }
+
+    .settings-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .settings-card h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 0.8rem;
+    }
+
+    .ctrl-row label {
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 95px;
+    }
+
+    .ctrl-row input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .ctrl-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      border: 2px solid var(--card);
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .ctrl-row .val {
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 36px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .divider {
+      height: 0.5px;
+      background: var(--border);
+      margin: 0.75rem 0;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 0;
+      margin-bottom: 0.4rem;
+    }
+
+    .toggle-row label.lbl {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .tog-bg {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .tog-bg::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .toggle input:checked + .tog-bg {
+      background: var(--green);
+    }
+
+    .toggle input:checked + .tog-bg::before {
+      transform: translateX(20px);
+    }
+
+    .btn-main {
+      width: 100%;
+      max-width: 360px;
+      padding: 16px;
+      border-radius: var(--radius);
+      border: none;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      letter-spacing: -0.2px;
+    }
+
+    .btn-main.start {
+      background: var(--green);
+      color: white;
+      box-shadow: 0 4px 14px rgba(29,158,117,0.35);
+    }
+
+    .btn-main.stop {
+      background: var(--red);
+      color: white;
+      box-shadow: 0 4px 14px rgba(226,75,74,0.35);
+    }
+
+    .btn-main:active {
+      transform: scale(0.98);
+    }
+
+    .history-section {
+      width: 100%;
+      max-width: 360px;
+      margin-top: 1rem;
+    }
+
+    .history-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    #histCanvas {
+      width: 100%;
+      height: 64px;
+      display: block;
+      border-radius: var(--radius-md);
+      background: var(--card);
+      border: 0.5px solid var(--border);
+    }
+
+    .install-hint {
+      width: 100%;
+      max-width: 360px;
+      margin-top: 1.5rem;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--text-hint);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .audio-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .audio-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+
+    .file-drop {
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 0.75rem;
+    }
+    .file-drop:hover, .file-drop.dragover { border-color: var(--green); background: var(--green-light); }
+    .file-drop input[type=file] { display: none; }
+    .file-drop-label { font-size: 13px; color: var(--text-muted); cursor: pointer; display: block; }
+    .file-drop-label span { color: var(--green); font-weight: 600; }
+
+    .file-loaded {
+      font-size: 12px; color: var(--green-dark); background: var(--green-light);
+      border-radius: var(--radius-md); padding: 6px 10px; margin-bottom: 0.75rem;
+      display: none; align-items: center; gap: 8px;
+    }
+    .file-loaded.visible { display: flex; }
+    .file-loaded .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn-remove { background: none; border: none; color: var(--red); font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1; }
+    .btn-preview {
+      background: none; border: 0.5px solid var(--border); border-radius: var(--radius-md);
+      color: var(--text-muted); font-size: 12px; padding: 5px 12px; cursor: pointer;
+      transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-preview:hover { background: var(--bg); }
+  </style>
+</head>
+<body>
+
+  <h1>🔊 Lautstärke-Monitor</h1>
+  <p class="subtitle">Für Klassen, Gruppen &amp; Kinder</p>
+
+  <div id="alertBanner" class="alert-banner">⚠️ Zu laut! Bitte leiser sein.</div>
+
+  <div class="meter-card">
+    <div class="db-display">
+      <div class="db-value" id="dbVal">--</div>
+      <div class="db-unit">Lautstärke-Pegel (relativ, 0–100)</div>
+    </div>
+    <div class="bar-bg">
+      <div class="bar-fill" id="barFill"></div>
+      <div class="threshold-marker" id="threshMarker" style="left:70%"></div>
+    </div>
+    <div class="bar-zone-labels">
+      <span>Still</span>
+      <span>Normal</span>
+      <span>Laut</span>
+    </div>
+    <div class="status-badge-wrap">
+      <span class="badge idle" id="statusBadge">Inaktiv</span>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <h2>Einstellungen</h2>
+
+    <div class="ctrl-row">
+      <label>Schwellwert</label>
+      <input type="range" id="threshSlider" min="10" max="95" value="70" step="1">
+      <span class="val" id="threshVal">70</span>
+    </div>
+
+    <div class="ctrl-row">
+      <label>Empfindlichkeit</label>
+      <input type="range" id="sensSlider" min="1" max="10" value="4" step="1">
+      <span class="val" id="sensVal">4</span>
+    </div>
+
+    <div class="ctrl-row">
+      <label>Cooldown (s)</label>
+      <input type="range" id="cooldownSlider" min="2" max="30" value="5" step="1">
+      <span class="val" id="cooldownVal">5</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="toggle-row">
+      <label class="lbl">Ton-Alarm</label>
+      <label class="toggle">
+        <input type="checkbox" id="soundToggle" checked>
+        <span class="tog-bg"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <label class="lbl">Bild-Alarm (Rot-Flash)</label>
+      <label class="toggle">
+        <input type="checkbox" id="flashToggle" checked>
+        <span class="tog-bg"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <label class="lbl">Alarm-Meldung anzeigen</label>
+      <label class="toggle">
+        <input type="checkbox" id="bannerToggle" checked>
+        <span class="tog-bg"></span>
+      </label>
+    </div>
+  </div>
+
+
+  <div class="audio-card">
+    <h2>Alarm-Audiodatei</h2>
+
+    <div class="file-drop" id="fileDrop">
+      <input type="file" id="audioFileInput" accept="audio/*">
+      <label class="file-drop-label" for="audioFileInput">
+        &#127925; <span>Datei auswaehlen</span> oder hierher ziehen<br>
+        <small style="font-size:11px;color:var(--text-hint);margin-top:4px;display:block;">MP3, WAV, OGG, M4A ...</small>
+      </label>
+    </div>
+
+    <div class="file-loaded" id="fileLoaded">
+      <span class="fname" id="fileName">-</span>
+      <button class="btn-preview" id="previewBtn">&#9654; Test</button>
+      <button class="btn-remove" id="removeFileBtn" title="Entfernen">&#10005;</button>
+    </div>
+
+    <div class="ctrl-row">
+      <label>Lautstaerke</label>
+      <input type="range" id="audioVolSlider" min="0" max="100" value="80" step="1">
+      <span class="val" id="audioVolVal">80</span>
+    </div>
+
+    <div class="toggle-row" style="margin-top:0.25rem;">
+      <label class="lbl">Audiodatei statt Signalton</label>
+      <label class="toggle">
+        <input type="checkbox" id="useFileToggle">
+        <span class="tog-bg"></span>
+      </label>
+    </div>
+  </div>
+
+  <button class="btn-main start" id="mainBtn">Messung starten</button>
+
+  <div class="history-section">
+    <div class="history-title">Verlauf (letzte 60 Sekunden)</div>
+    <canvas id="histCanvas" width="720" height="128"></canvas>
+  </div>
+
+  <div class="install-hint">
+    📱 Tipp: „Zum Startbildschirm hinzufügen" im Browser-Menü für App-Erlebnis ohne Browser-Leiste.
+  </div>
+
+  <script>
+    // --- State ---
+    let audioCtx = null, analyser = null, sourceNode = null, micStream = null;
+    let running = false, animId = null;
+    let lastAlarm = 0;
+    let histData = new Array(120).fill(0);
+    let histTick = 0;
+    let flashTO = null, bannerTO = null;
+    let alarmAudio = null, alarmAudioUrl = null;
+
+    // --- DOM ---
+    const dbVal       = document.getElementById('dbVal');
+    const barFill     = document.getElementById('barFill');
+    const threshMarker= document.getElementById('threshMarker');
+    const statusBadge = document.getElementById('statusBadge');
+    const alertBanner = document.getElementById('alertBanner');
+    const mainBtn     = document.getElementById('mainBtn');
+    const histCanvas  = document.getElementById('histCanvas');
+    const hctx        = histCanvas.getContext('2d');
+
+    const threshSlider  = document.getElementById('threshSlider');
+    const sensSlider    = document.getElementById('sensSlider');
+    const cooldownSlider= document.getElementById('cooldownSlider');
+    const threshValEl   = document.getElementById('threshVal');
+    const sensValEl     = document.getElementById('sensVal');
+    const cooldownValEl = document.getElementById('cooldownVal');
+    const soundToggle   = document.getElementById('soundToggle');
+    const flashToggle   = document.getElementById('flashToggle');
+    const bannerToggle  = document.getElementById('bannerToggle');
+    const audioFileInput  = document.getElementById('audioFileInput');
+    const fileDrop        = document.getElementById('fileDrop');
+    const fileLoaded      = document.getElementById('fileLoaded');
+    const fileNameEl      = document.getElementById('fileName');
+    const previewBtn      = document.getElementById('previewBtn');
+    const removeFileBtn   = document.getElementById('removeFileBtn');
+    const audioVolSlider  = document.getElementById('audioVolSlider');
+    const audioVolValEl   = document.getElementById('audioVolVal');
+    const useFileToggle   = document.getElementById('useFileToggle');
+
+    // --- Controls ---
+    threshSlider.addEventListener('input', () => {
+      threshValEl.textContent = threshSlider.value;
+      threshMarker.style.left = threshSlider.value + '%';
+    });
+    sensSlider.addEventListener('input', () => sensValEl.textContent = sensSlider.value);
+    sensValEl.textContent = sensSlider.value;
+    audioVolSlider.addEventListener('input', () => {
+      audioVolValEl.textContent = audioVolSlider.value;
+      if (alarmAudio) alarmAudio.volume = audioVolSlider.value / 100;
+    });
+    cooldownSlider.addEventListener('input', () => cooldownValEl.textContent = cooldownSlider.value);
+
+    function getThresh()   { return parseInt(threshSlider.value); }
+    function getSens()     { return parseInt(sensSlider.value); }
+    function getCooldown() { return parseInt(cooldownSlider.value) * 1000; }
+
+    // --- Audio File Handling ---
+    function loadAudioFile(file) {
+      if (!file || !file.type.startsWith('audio/')) {
+        alert('Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.');
+        return;
+      }
+      if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
+      alarmAudioUrl = URL.createObjectURL(file);
+      alarmAudio = new Audio(alarmAudioUrl);
+      alarmAudio.volume = audioVolSlider.value / 100;
+      fileNameEl.textContent = file.name;
+      fileLoaded.classList.add('visible');
+      useFileToggle.checked = true;
+    }
+
+    audioFileInput.addEventListener('change', e => {
+      if (e.target.files[0]) loadAudioFile(e.target.files[0]);
+    });
+
+    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('dragover'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
+    fileDrop.addEventListener('drop', e => {
+      e.preventDefault();
+      fileDrop.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) loadAudioFile(e.dataTransfer.files[0]);
+    });
+
+    previewBtn.addEventListener('click', () => {
+      if (!alarmAudio) return;
+      alarmAudio.currentTime = 0;
+      alarmAudio.play().catch(() => alert('Wiedergabe fehlgeschlagen.'));
+    });
+
+    removeFileBtn.addEventListener('click', () => {
+      if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
+      alarmAudio = null; alarmAudioUrl = null;
+      audioFileInput.value = '';
+      fileLoaded.classList.remove('visible');
+      useFileToggle.checked = false;
+    });
+
+    function playAudioFile() {
+      if (!alarmAudio) return;
+      alarmAudio.currentTime = 0;
+      alarmAudio.volume = audioVolSlider.value / 100;
+      alarmAudio.play().catch(() => {});
+    }
+
+    // --- Alarm Sound (Web Audio API, kein externes File nötig) ---
+    function playAlarmSound() {
+      if (!audioCtx) return;
+      const ctx = audioCtx;
+      const now = ctx.currentTime;
+
+      // Zwei-Ton-Alarm
+      [880, 660].forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0, now + i * 0.18);
+        gain.gain.linearRampToValueAtTime(0.25, now + i * 0.18 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + 0.18);
+        osc.start(now + i * 0.18);
+        osc.stop(now + i * 0.18 + 0.2);
+      });
+    }
+
+    // --- Alarm Trigger ---
+    function triggerAlarm() {
+      const now = Date.now();
+      if (now - lastAlarm < getCooldown()) return;
+      lastAlarm = now;
+
+      if (useFileToggle.checked && alarmAudio) {
+        playAudioFile();
+      } else if (soundToggle.checked) {
+        playAlarmSound();
+      }
+
+      if (flashToggle.checked) {
+        document.body.classList.add('alarm-flash');
+        clearTimeout(flashTO);
+        flashTO = setTimeout(() => document.body.classList.remove('alarm-flash'), 2500);
+      }
+
+      if (bannerToggle.checked) {
+        alertBanner.classList.add('visible');
+        clearTimeout(bannerTO);
+        bannerTO = setTimeout(() => alertBanner.classList.remove('visible'), 3000);
+      }
+    }
+
+    // --- RMS → Level (0–100) ---
+    function rmsToLevel(rms, sens) {
+      const scale = 0.05 + (sens - 1) * 0.15;
+      const normalized = Math.min(rms * scale * 10, 1.0);
+      // Logarithmisch skaliert für natürlicheres Verhalten
+      const log = Math.log10(1 + normalized * 9) / Math.log10(10);
+      return Math.round(log * 100);
+    }
+
+    // --- History Canvas ---
+    function drawHistory() {
+      const w = histCanvas.width;
+      const h = histCanvas.height;
+      hctx.clearRect(0, 0, w, h);
+
+      const thresh = getThresh();
+
+      // Threshold-Linie
+      hctx.strokeStyle = '#E24B4A';
+      hctx.lineWidth = 2;
+      hctx.setLineDash([6, 4]);
+      const ty = h - (thresh / 100) * h;
+      hctx.beginPath();
+      hctx.moveTo(0, ty);
+      hctx.lineTo(w, ty);
+      hctx.stroke();
+      hctx.setLineDash([]);
+
+      // Balken
+      const bw = w / histData.length;
+      for (let i = 0; i < histData.length; i++) {
+        const v = histData[i];
+        const bh = Math.max((v / 100) * h, 1);
+        hctx.fillStyle = v > thresh ? '#E24B4A' : v > thresh * 0.8 ? '#EF9F27' : '#1D9E75';
+        hctx.globalAlpha = 0.75;
+        hctx.fillRect(i * bw + 1, h - bh, bw - 1.5, bh);
+      }
+      hctx.globalAlpha = 1;
+    }
+
+    // --- Audio Loop ---
+    function loop() {
+      if (!running) return;
+      animId = requestAnimationFrame(loop);
+
+      const bufLen = analyser.frequencyBinCount;
+      const td = new Uint8Array(bufLen);
+      analyser.getByteTimeDomainData(td);
+
+      let sum = 0;
+      for (let i = 0; i < bufLen; i++) {
+        const v = (td[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / bufLen);
+      const level = rmsToLevel(rms, getSens());
+      const pct = Math.min(level, 100);
+      const thresh = getThresh();
+
+      // Anzeige
+      dbVal.textContent = level;
+      dbVal.style.color = level > thresh ? '#E24B4A' : (level > thresh * 0.85 ? '#EF9F27' : 'var(--text)');
+      barFill.style.width = pct + '%';
+      barFill.style.background = pct > thresh ? '#E24B4A' : (pct > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
+
+      statusBadge.className = 'badge ' + (level > thresh ? 'warn' : 'ok');
+      statusBadge.textContent = level > thresh ? '⚠ Zu laut!' : '✓ OK';
+
+      if (level > thresh) triggerAlarm();
+
+      // History: alle ~4 Frames = ca. 4× pro Sekunde
+      histTick++;
+      if (histTick % 4 === 0) {
+        histData.push(level);
+        if (histData.length > 120) histData.shift();
+        drawHistory();
+      }
+    }
+
+    // --- Start / Stop ---
+    async function startMeasurement() {
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.75;
+        sourceNode = audioCtx.createMediaStreamSource(micStream);
+        sourceNode.connect(analyser);
+        running = true;
+        histTick = 0;
+        histData = new Array(120).fill(0);
+        mainBtn.textContent = 'Messung stoppen';
+        mainBtn.className = 'btn-main stop';
+        statusBadge.className = 'badge ok';
+        statusBadge.textContent = '✓ Aktiv';
+        loop();
+      } catch (err) {
+        alert('Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen für diese Seite erlauben und erneut versuchen.\n\n(' + err.message + ')');
+      }
+    }
+
+    function stopMeasurement() {
+      running = false;
+      cancelAnimationFrame(animId);
+      if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+      if (audioCtx)   { audioCtx.close(); audioCtx = null; }
+      if (micStream)  { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      dbVal.textContent = '--';
+      dbVal.style.color = '';
+      barFill.style.width = '0%';
+      statusBadge.className = 'badge idle';
+      statusBadge.textContent = 'Inaktiv';
+      mainBtn.textContent = 'Messung starten';
+      mainBtn.className = 'btn-main start';
+      document.body.classList.remove('alarm-flash');
+      alertBanner.classList.remove('visible');
+    }
+
+    mainBtn.addEventListener('click', () => {
+      if (!running) startMeasurement();
+      else stopMeasurement();
+    });
+
+    // Initialen Marker setzen
+    threshMarker.style.left = threshSlider.value + '%';
+    drawHistory();
+  </script>
+</body>
+</html>
