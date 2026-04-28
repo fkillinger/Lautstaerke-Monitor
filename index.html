@@ -463,6 +463,12 @@
       <span class="val" id="cooldownVal">5</span>
     </div>
 
+    <div class="ctrl-row">
+      <label>Mittelung (s)</label>
+      <input type="range" id="smoothSlider" min="1" max="30" value="5" step="1">
+      <span class="val" id="smoothVal">0.5</span>
+    </div>
+
     <div class="divider"></div>
 
     <div class="toggle-row">
@@ -543,6 +549,8 @@
     let histTick = 0;
     let flashTO = null, bannerTO = null;
     let alarmAudio = null, alarmAudioUrl = null;
+    let smoothBuffer = [];      // Gleitender Mittelwert-Puffer
+    let smoothedLevel = 0;      // Geglätteter Pegel
 
     // --- DOM ---
     const dbVal       = document.getElementById('dbVal');
@@ -560,6 +568,8 @@
     const threshValEl   = document.getElementById('threshVal');
     const sensValEl     = document.getElementById('sensVal');
     const cooldownValEl = document.getElementById('cooldownVal');
+    const smoothSlider  = document.getElementById('smoothSlider');
+    const smoothValEl   = document.getElementById('smoothVal');
     const soundToggle   = document.getElementById('soundToggle');
     const flashToggle   = document.getElementById('flashToggle');
     const bannerToggle  = document.getElementById('bannerToggle');
@@ -580,11 +590,20 @@
     });
     sensSlider.addEventListener('input', () => sensValEl.textContent = sensSlider.value);
     sensValEl.textContent = sensSlider.value;
+    smoothValEl.textContent = (smoothSlider.value / 10).toFixed(1);
     audioVolSlider.addEventListener('input', () => {
       audioVolValEl.textContent = audioVolSlider.value;
       if (alarmAudio) alarmAudio.volume = audioVolSlider.value / 100;
     });
     cooldownSlider.addEventListener('input', () => cooldownValEl.textContent = cooldownSlider.value);
+    smoothSlider.addEventListener('input', () => {
+      const secs = (smoothSlider.value / 10).toFixed(1);
+      smoothValEl.textContent = secs;
+      smoothBuffer = []; // Puffer bei Aenderung zuruecksetzen
+    });
+
+    // Anzahl Frames fuer Mittelung: Slider-Wert / 10 Sekunden * ~60 fps
+    function getSmoothFrames() { return Math.max(1, Math.round((smoothSlider.value / 10) * 60)); }
 
     function getThresh()   { return parseInt(threshSlider.value); }
     function getSens()     { return parseInt(sensSlider.value); }
@@ -740,7 +759,15 @@
         sum += v * v;
       }
       const rms = Math.sqrt(sum / bufLen);
-      const level = rmsToLevel(rms, getSens());
+      const rawLevel = rmsToLevel(rms, getSens());
+
+      // Gleitender Mittelwert
+      smoothBuffer.push(rawLevel);
+      const maxFrames = getSmoothFrames();
+      if (smoothBuffer.length > maxFrames) smoothBuffer.shift();
+      smoothedLevel = Math.round(smoothBuffer.reduce((a, b) => a + b, 0) / smoothBuffer.length);
+
+      const level = smoothedLevel;
       const pct = Math.min(level, 100);
       const thresh = getThresh();
 
@@ -771,7 +798,7 @@
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.75;
+        analyser.smoothingTimeConstant = 0.85;
         sourceNode = audioCtx.createMediaStreamSource(micStream);
         sourceNode.connect(analyser);
         running = true;
@@ -793,6 +820,7 @@
       if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
       if (audioCtx)   { audioCtx.close(); audioCtx = null; }
       if (micStream)  { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      smoothBuffer = []; smoothedLevel = 0;
       dbVal.textContent = '--';
       dbVal.style.color = '';
       barFill.style.width = '0%';
@@ -808,6 +836,55 @@
       if (!running) startMeasurement();
       else stopMeasurement();
     });
+
+    // --- Einstellungen speichern / laden (localStorage) ---
+    const STORAGE_KEY = 'lautstaerke_settings_v1';
+
+    function saveSettings() {
+      const settings = {
+        threshold:   threshSlider.value,
+        sensitivity: sensSlider.value,
+        cooldown:    cooldownSlider.value,
+        smooth:      smoothSlider.value,
+        sound:       soundToggle.checked,
+        flash:       flashToggle.checked,
+        banner:      bannerToggle.checked,
+        audioVol:    audioVolSlider.value,
+        useFile:     useFileToggle.checked
+      };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+
+        if (s.threshold   != null) { threshSlider.value   = s.threshold;   threshValEl.textContent   = s.threshold; }
+        if (s.sensitivity != null) { sensSlider.value     = s.sensitivity; sensValEl.textContent     = s.sensitivity; }
+        if (s.cooldown    != null) { cooldownSlider.value = s.cooldown;    cooldownValEl.textContent = s.cooldown; }
+        if (s.smooth      != null) { smoothSlider.value   = s.smooth;      smoothValEl.textContent   = (s.smooth / 10).toFixed(1); }
+        if (s.audioVol    != null) { audioVolSlider.value = s.audioVol;    audioVolValEl.textContent = s.audioVol; }
+        if (s.sound   != null) soundToggle.checked   = s.sound;
+        if (s.flash   != null) flashToggle.checked   = s.flash;
+        if (s.banner  != null) bannerToggle.checked  = s.banner;
+        if (s.useFile != null) useFileToggle.checked = s.useFile;
+
+        threshMarker.style.left = threshSlider.value + '%';
+      } catch(e) {}
+    }
+
+    // Bei jeder Aenderung automatisch speichern
+    [threshSlider, sensSlider, cooldownSlider, smoothSlider, audioVolSlider].forEach(el => {
+      el.addEventListener('input', saveSettings);
+    });
+    [soundToggle, flashToggle, bannerToggle, useFileToggle].forEach(el => {
+      el.addEventListener('change', saveSettings);
+    });
+
+    // Einstellungen beim Start laden
+    loadSettings();
 
     // Initialen Marker setzen
     threshMarker.style.left = threshSlider.value + '%';
