@@ -612,25 +612,73 @@
     function getSens()     { return parseInt(sensSlider.value); }
     function getCooldown() { return parseInt(cooldownSlider.value) * 1000; }
 
-    // --- Audio File Handling ---
-    function loadAudioFile(file) {
-      if (!file || !file.type.startsWith('audio/')) {
-        alert('Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.');
-        return;
-      }
-      if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
-      // Alten Source trennen
-      if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} }
+    // --- IndexedDB fuer Audiodatei-Persistenz ---
+    const IDB_NAME    = 'lautstaerke_db';
+    const IDB_STORE   = 'audiofile';
+    const IDB_KEY     = 'alarm';
+    const MAX_BYTES   = 5 * 1024 * 1024;   // 5 MB
+    const MAX_SECS    = 60;
 
-      alarmAudioUrl = URL.createObjectURL(file);
-      alarmAudio = new Audio(alarmAudioUrl);
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+      });
+    }
+
+    async function saveAudioToDB(file) {
+      const buf = await file.arrayBuffer();
+      const db  = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx  = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put({ name: file.name, type: file.type, data: buf }, IDB_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror    = e => reject(e.target.error);
+      });
+    }
+
+    async function loadAudioFromDB() {
+      try {
+        const db = await openDB();
+        const record = await new Promise((resolve, reject) => {
+          const tx  = db.transaction(IDB_STORE, 'readonly');
+          const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+          req.onsuccess = e => resolve(e.target.result);
+          req.onerror   = e => reject(e.target.error);
+        });
+        if (!record) return;
+        const blob = new Blob([record.data], { type: record.type });
+        setupAlarmAudio(blob, record.name);
+      } catch(e) { console.warn('IndexedDB laden fehlgeschlagen:', e); }
+    }
+
+    async function deleteAudioFromDB() {
+      try {
+        const db = await openDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          tx.objectStore(IDB_STORE).delete(IDB_KEY);
+          tx.oncomplete = () => resolve();
+          tx.onerror    = e => reject(e.target.error);
+        });
+      } catch(e) {}
+    }
+
+    // Kern-Funktion: Audio-Objekt aufbauen (wird von loadAudioFile & loadAudioFromDB genutzt)
+    function setupAlarmAudio(blob, name) {
+      if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
+      if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} alarmAudioSource = null; }
+
+      alarmAudioUrl = URL.createObjectURL(blob);
+      alarmAudio    = new Audio(alarmAudioUrl);
       alarmAudio.crossOrigin = 'anonymous';
 
-      // Durch Web Audio API routen fuer Verstaerkung ueber 100%
       function connectToWebAudio() {
-        if (!audioCtx) return; // audioCtx noch nicht gestartet, wird in playAudioFile nachgeholt
+        if (!audioCtx) return;
         alarmAudioSource = audioCtx.createMediaElementSource(alarmAudio);
-        alarmGainNode = audioCtx.createGain();
+        alarmGainNode    = audioCtx.createGain();
         alarmGainNode.gain.value = audioVolSlider.value / 100;
         alarmAudioSource.connect(alarmGainNode);
         alarmGainNode.connect(audioCtx.destination);
@@ -638,9 +686,57 @@
       connectToWebAudio();
       alarmAudio._connectFn = connectToWebAudio;
 
-      fileNameEl.textContent = file.name;
+      fileNameEl.textContent = name;
       fileLoaded.classList.add('visible');
       useFileToggle.checked = true;
+    }
+
+    // --- Audio File Handling ---
+    function loadAudioFile(file) {
+      if (!file || !file.type.startsWith('audio/')) {
+        alert('Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.');
+        return;
+      }
+
+      // Groesse pruefen
+      if (file.size > MAX_BYTES) {
+        alert('Datei zu gross (>' + (MAX_BYTES/1024/1024).toFixed(0) + ' MB).
+Bitte eine kuerzere Aufnahme verwenden.');
+        return;
+      }
+
+      // Laenge pruefen (asynchron, nach dem Laden)
+      const tmpUrl  = URL.createObjectURL(file);
+      const tmpAudio = new Audio(tmpUrl);
+      tmpAudio.addEventListener('loadedmetadata', async () => {
+        URL.revokeObjectURL(tmpUrl);
+        const dur = tmpAudio.duration;
+        let proceed = true;
+        if (dur > MAX_SECS) {
+          proceed = confirm(
+            'Die Audiodatei ist ' + Math.round(dur) + ' Sekunden lang.
+' +
+            'Empfohlen: max. ' + MAX_SECS + ' Sekunden.
+
+' +
+            'Trotzdem laden?'
+          );
+        }
+        if (!proceed) return;
+
+        setupAlarmAudio(file, file.name);
+
+        // In IndexedDB speichern
+        try {
+          await saveAudioToDB(file);
+        } catch(e) {
+          console.warn('Speichern in IndexedDB fehlgeschlagen:', e);
+        }
+      });
+      tmpAudio.addEventListener('error', () => {
+        URL.revokeObjectURL(tmpUrl);
+        alert('Audiodatei konnte nicht gelesen werden.');
+      });
     }
 
     audioFileInput.addEventListener('change', e => {
@@ -672,6 +768,7 @@
       audioFileInput.value = '';
       fileLoaded.classList.remove('visible');
       useFileToggle.checked = false;
+      deleteAudioFromDB();
     });
 
     function playAudioFile() {
@@ -924,6 +1021,9 @@
 
     // Einstellungen beim Start laden
     loadSettings();
+
+    // Gespeicherte Audiodatei aus IndexedDB laden
+    loadAudioFromDB();
 
     // Initialen Marker setzen
     threshMarker.style.left = threshSlider.value + '%';
