@@ -6,394 +6,103 @@
   <meta name="theme-color" content="#1D9E75">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Lautstärke">
-  <title>Lautstärke-Monitor</title>
+  <meta name="apple-mobile-web-app-title" content="Lautstaerke">
+  <title>Lautstaerke-Monitor</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --green: #1D9E75;
-      --green-light: #E1F5EE;
-      --green-dark: #0F6E56;
-      --amber: #EF9F27;
-      --red: #E24B4A;
-      --red-light: #FCEBEB;
-      --red-mid: #F09595;
-      --red-dark: #A32D2D;
-      --bg: #F5F4F0;
-      --card: #FFFFFF;
-      --border: rgba(0,0,0,0.12);
-      --text: #1a1a18;
-      --text-muted: #666660;
-      --text-hint: #999993;
-      --radius: 14px;
-      --radius-md: 8px;
+      --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
+      --amber: #EF9F27; --red: #E24B4A; --red-light: #FCEBEB;
+      --red-mid: #F09595; --red-dark: #A32D2D;
+      --bg: #F5F4F0; --card: #FFFFFF; --border: rgba(0,0,0,0.12);
+      --text: #1a1a18; --text-muted: #666660; --text-hint: #999993;
+      --radius: 14px; --radius-md: 8px;
     }
-
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #1a1a18;
-        --card: #262624;
-        --border: rgba(255,255,255,0.10);
-        --text: #F0EFE8;
-        --text-muted: #9A9990;
-        --text-hint: #66665E;
-        --green-light: #04342C;
-        --red-light: #501313;
-        --red-mid: #791F1F;
-        --red-dark: #F09595;
-        --green-dark: #9FE1CB;
+        --bg: #1a1a18; --card: #262624; --border: rgba(255,255,255,0.10);
+        --text: #F0EFE8; --text-muted: #9A9990; --text-hint: #66665E;
+        --green-light: #04342C; --red-light: #501313; --red-mid: #791F1F;
+        --red-dark: #F09595; --green-dark: #9FE1CB;
       }
     }
-
-    html, body {
-      min-height: 100%;
-      height: 100%;
-    }
-
+    html, body { min-height: 100%; height: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.5rem 1rem 3rem;
-      gap: 0;
-      transition: background 0.3s;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 1.5rem 1rem 3rem; transition: background 0.3s;
     }
-
-    body.alarm-flash {
-      background: var(--red-light) !important;
-    }
-
-    h1 {
-      font-size: 22px;
-      font-weight: 600;
-      text-align: center;
-      margin-bottom: 0.2rem;
-    }
-
-    .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-align: center;
-      margin-bottom: 1.25rem;
-    }
+    body.alarm-flash { background: var(--red-light) !important; }
+    h1 { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 0.2rem; }
+    .subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 1.25rem; }
 
     .alert-banner {
-      width: 100%;
-      max-width: 360px;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      background: var(--red-light);
-      color: var(--red-dark);
-      font-size: 15px;
-      font-weight: 600;
-      text-align: center;
-      margin-bottom: 1rem;
-      border: 1px solid var(--red-mid);
-      opacity: 0;
-      transform: translateY(-8px);
-      transition: opacity 0.2s, transform 0.2s;
-      pointer-events: none;
+      width: 100%; max-width: 360px; padding: 12px 16px;
+      border-radius: var(--radius); background: var(--red-light); color: var(--red-dark);
+      font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 1rem;
+      border: 1px solid var(--red-mid); opacity: 0; transform: translateY(-8px);
+      transition: opacity 0.2s, transform 0.2s; pointer-events: none;
     }
+    .alert-banner.visible { opacity: 1; transform: translateY(0); }
 
-    .alert-banner.visible {
-      opacity: 1;
-      transform: translateY(0);
+    .meter-card, .settings-card, .audio-card {
+      width: 100%; max-width: 360px; background: var(--card);
+      border: 0.5px solid var(--border); border-radius: var(--radius);
+      padding: 1.25rem; margin-bottom: 1rem;
     }
+    .meter-card { padding: 1.5rem 1.25rem; }
+    .settings-card h2, .audio-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
 
-    .meter-card {
-      width: 100%;
-      max-width: 360px;
-      background: var(--card);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem 1.25rem;
-      margin-bottom: 1rem;
-    }
-
-    .db-display {
-      text-align: center;
-      margin-bottom: 1.25rem;
-    }
-
-    .db-value {
-      font-size: 64px;
-      font-weight: 600;
-      line-height: 1;
-      transition: color 0.15s;
-      letter-spacing: -2px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .db-unit {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
+    .db-display { text-align: center; margin-bottom: 1.25rem; }
+    .db-value { font-size: 64px; font-weight: 600; line-height: 1; transition: color 0.15s; font-variant-numeric: tabular-nums; }
+    .db-unit { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
 
     .bar-bg {
-      width: 100%;
-      height: 30px;
-      background: var(--bg);
-      border-radius: 15px;
-      overflow: hidden;
-      position: relative;
-      border: 0.5px solid var(--border);
+      width: 100%; height: 30px; background: var(--bg);
+      border-radius: 15px; overflow: hidden; position: relative; border: 0.5px solid var(--border);
     }
-
-    .bar-fill {
-      height: 100%;
-      border-radius: 15px;
-      width: 0%;
-      transition: width 0.08s ease-out, background 0.15s;
-      background: var(--green);
-    }
-
-    .threshold-marker {
-      position: absolute;
-      top: 0;
-      height: 100%;
-      width: 3px;
-      background: var(--red);
-      opacity: 0.85;
-      pointer-events: none;
-      border-radius: 1px;
-    }
-
-    .bar-zone-labels {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 5px;
-      font-size: 11px;
-      color: var(--text-hint);
-      padding: 0 2px;
-    }
-
-    .status-badge-wrap {
-      margin-top: 14px;
-      text-align: center;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 5px 18px;
-      border-radius: 99px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-
+    .bar-fill { height: 100%; border-radius: 15px; width: 0%; transition: width 0.08s ease-out, background 0.15s; background: var(--green); }
+    .threshold-marker { position: absolute; top: 0; height: 100%; width: 3px; background: var(--red); opacity: 0.85; pointer-events: none; border-radius: 1px; }
+    .bar-zone-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: var(--text-hint); padding: 0 2px; }
+    .status-badge-wrap { margin-top: 14px; text-align: center; }
+    .badge { display: inline-block; padding: 5px 18px; border-radius: 99px; font-size: 13px; font-weight: 600; }
     .badge.idle { background: var(--bg); color: var(--text-muted); }
-    .badge.ok { background: var(--green-light); color: var(--green-dark); }
+    .badge.ok   { background: var(--green-light); color: var(--green-dark); }
     .badge.warn { background: var(--red-light); color: var(--red-dark); }
 
-    .settings-card {
-      width: 100%;
-      max-width: 360px;
-      background: var(--card);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      margin-bottom: 1rem;
-    }
-
-    .settings-card h2 {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--text);
-    }
-
-    .ctrl-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 0.8rem;
-    }
-
-    .ctrl-row label {
-      font-size: 13px;
-      color: var(--text-muted);
-      min-width: 95px;
-    }
-
+    .ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.8rem; }
+    .ctrl-row label { font-size: 13px; color: var(--text-muted); min-width: 100px; }
     .ctrl-row input[type=range] {
-      flex: 1;
-      -webkit-appearance: none;
-      height: 4px;
-      border-radius: 2px;
-      background: var(--border);
-      outline: none;
-      cursor: pointer;
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 4px; border-radius: 2px; background: var(--border); outline: none; cursor: pointer;
     }
-
     .ctrl-row input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--text);
-      cursor: pointer;
-      border: 2px solid var(--card);
+      -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+      background: var(--text); cursor: pointer; border: 2px solid var(--card);
       box-shadow: 0 0 0 1px var(--border);
     }
-
-    .ctrl-row .val {
-      font-size: 13px;
-      font-weight: 600;
-      min-width: 36px;
-      text-align: right;
-      font-variant-numeric: tabular-nums;
+    .ctrl-row input[type=range]::-moz-range-thumb {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--text); cursor: pointer; border: 2px solid var(--card);
+      box-shadow: 0 0 0 1px var(--border);
     }
+    .ctrl-row .val { font-size: 13px; font-weight: 600; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
 
-    .divider {
-      height: 0.5px;
-      background: var(--border);
-      margin: 0.75rem 0;
-    }
-
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 2px 0;
-      margin-bottom: 0.4rem;
-    }
-
-    .toggle-row label.lbl {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .toggle {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      flex-shrink: 0;
-    }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-      position: absolute;
-    }
-
-    .tog-bg {
-      position: absolute;
-      inset: 0;
-      background: var(--border);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .tog-bg::before {
-      content: '';
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      left: 3px;
-      top: 3px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-
-    .toggle input:checked + .tog-bg {
-      background: var(--green);
-    }
-
-    .toggle input:checked + .tog-bg::before {
-      transform: translateX(20px);
-    }
-
-    .btn-main {
-      width: 100%;
-      max-width: 360px;
-      padding: 16px;
-      border-radius: var(--radius);
-      border: none;
-      font-size: 17px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
-      letter-spacing: -0.2px;
-    }
-
-    .btn-main.start {
-      background: var(--green);
-      color: white;
-      box-shadow: 0 4px 14px rgba(29,158,117,0.35);
-    }
-
-    .btn-main.stop {
-      background: var(--red);
-      color: white;
-      box-shadow: 0 4px 14px rgba(226,75,74,0.35);
-    }
-
-    .btn-main:active {
-      transform: scale(0.98);
-    }
-
-    .history-section {
-      width: 100%;
-      max-width: 360px;
-      margin-top: 1rem;
-    }
-
-    .history-title {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
-
-    #histCanvas {
-      width: 100%;
-      height: 64px;
-      display: block;
-      border-radius: var(--radius-md);
-      background: var(--card);
-      border: 0.5px solid var(--border);
-    }
-
-    .install-hint {
-      width: 100%;
-      max-width: 360px;
-      margin-top: 1.5rem;
-      padding: 10px 14px;
-      background: var(--card);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-md);
-      font-size: 12px;
-      color: var(--text-hint);
-      text-align: center;
-      line-height: 1.5;
-    }
-
-    .audio-card {
-      width: 100%;
-      max-width: 360px;
-      background: var(--card);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      margin-bottom: 1rem;
-    }
-    .audio-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+    .divider { height: 0.5px; background: var(--border); margin: 0.75rem 0; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+    .toggle-row .lbl { font-size: 13px; color: var(--text-muted); }
+    .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .tog-bg { position: absolute; inset: 0; background: #ccc; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .tog-bg::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .toggle input:checked + .tog-bg { background: var(--green); }
+    .toggle input:checked + .tog-bg::before { transform: translateX(20px); }
 
     .file-drop {
-      border: 1.5px dashed var(--border);
-      border-radius: var(--radius-md);
-      padding: 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      margin-bottom: 0.75rem;
+      border: 1.5px dashed var(--border); border-radius: var(--radius-md);
+      padding: 1rem; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s; margin-bottom: 0.75rem;
     }
     .file-drop:hover, .file-drop.dragover { border-color: var(--green); background: var(--green-light); }
     .file-drop input[type=file] { display: none; }
@@ -407,36 +116,56 @@
     }
     .file-loaded.visible { display: flex; }
     .file-loaded .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .btn-remove { background: none; border: none; color: var(--red); font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1; }
+
     .btn-preview {
       background: none; border: 0.5px solid var(--border); border-radius: var(--radius-md);
       color: var(--text-muted); font-size: 12px; padding: 5px 12px; cursor: pointer;
       transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
     }
     .btn-preview:hover { background: var(--bg); }
+    .btn-remove {
+      background: none; border: none; color: var(--red);
+      font-size: 18px; font-weight: 700; cursor: pointer;
+      padding: 2px 6px; line-height: 1; flex-shrink: 0;
+    }
+
+    .btn-main {
+      width: 100%; max-width: 360px; padding: 16px; border-radius: var(--radius);
+      border: none; font-size: 17px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s; letter-spacing: -0.2px;
+    }
+    .btn-main.start { background: var(--green); color: white; box-shadow: 0 4px 14px rgba(29,158,117,0.35); }
+    .btn-main.stop  { background: var(--red);   color: white; box-shadow: 0 4px 14px rgba(226,75,74,0.35); }
+    .btn-main:active { transform: scale(0.98); }
+
+    .history-section { width: 100%; max-width: 360px; margin-top: 1rem; }
+    .history-title { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    #histCanvas { width: 100%; height: 64px; display: block; border-radius: var(--radius-md); background: var(--card); border: 0.5px solid var(--border); }
+
+    .install-hint {
+      width: 100%; max-width: 360px; margin-top: 1.5rem; padding: 10px 14px;
+      background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius-md);
+      font-size: 12px; color: var(--text-hint); text-align: center; line-height: 1.5;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🔊 Lautstärke-Monitor</h1>
-  <p class="subtitle">Für Klassen, Gruppen &amp; Kinder</p>
+  <h1>&#128266; Lautstaerke-Monitor</h1>
+  <p class="subtitle">Fuer Klassen, Gruppen &amp; Kinder</p>
 
-  <div id="alertBanner" class="alert-banner">⚠️ Zu laut! Bitte leiser sein.</div>
+  <div id="alertBanner" class="alert-banner">Zu laut! Bitte leiser sein.</div>
 
   <div class="meter-card">
     <div class="db-display">
       <div class="db-value" id="dbVal">--</div>
-      <div class="db-unit">Lautstärke-Pegel (relativ, 0–100)</div>
+      <div class="db-unit">Lautstaerke-Pegel (relativ, 0-100)</div>
     </div>
     <div class="bar-bg">
       <div class="bar-fill" id="barFill"></div>
       <div class="threshold-marker" id="threshMarker" style="left:70%"></div>
     </div>
-    <div class="bar-zone-labels">
-      <span>Still</span>
-      <span>Normal</span>
-      <span>Laut</span>
-    </div>
+    <div class="bar-zone-labels"><span>Still</span><span>Normal</span><span>Laut</span></div>
     <div class="status-badge-wrap">
       <span class="badge idle" id="statusBadge">Inaktiv</span>
     </div>
@@ -444,62 +173,43 @@
 
   <div class="settings-card">
     <h2>Einstellungen</h2>
-
     <div class="ctrl-row">
       <label>Schwellwert</label>
       <input type="range" id="threshSlider" min="10" max="95" value="70" step="1">
       <span class="val" id="threshVal">70</span>
     </div>
-
     <div class="ctrl-row">
       <label>Empfindlichkeit</label>
       <input type="range" id="sensSlider" min="1" max="10" value="4" step="1">
       <span class="val" id="sensVal">4</span>
     </div>
-
     <div class="ctrl-row">
       <label>Cooldown (s)</label>
       <input type="range" id="cooldownSlider" min="2" max="30" value="5" step="1">
       <span class="val" id="cooldownVal">5</span>
     </div>
-
     <div class="ctrl-row">
       <label>Mittelung (s)</label>
       <input type="range" id="smoothSlider" min="1" max="30" value="5" step="1">
       <span class="val" id="smoothVal">0.5</span>
     </div>
-
     <div class="divider"></div>
-
     <div class="toggle-row">
-      <label class="lbl">Ton-Alarm</label>
-      <label class="toggle">
-        <input type="checkbox" id="soundToggle" checked>
-        <span class="tog-bg"></span>
-      </label>
+      <span class="lbl">Ton-Alarm</span>
+      <label class="toggle"><input type="checkbox" id="soundToggle" checked><span class="tog-bg"></span></label>
     </div>
-
     <div class="toggle-row">
-      <label class="lbl">Bild-Alarm (Rot-Flash)</label>
-      <label class="toggle">
-        <input type="checkbox" id="flashToggle" checked>
-        <span class="tog-bg"></span>
-      </label>
+      <span class="lbl">Bild-Alarm (Rot-Flash)</span>
+      <label class="toggle"><input type="checkbox" id="flashToggle" checked><span class="tog-bg"></span></label>
     </div>
-
     <div class="toggle-row">
-      <label class="lbl">Alarm-Meldung anzeigen</label>
-      <label class="toggle">
-        <input type="checkbox" id="bannerToggle" checked>
-        <span class="tog-bg"></span>
-      </label>
+      <span class="lbl">Alarm-Meldung anzeigen</span>
+      <label class="toggle"><input type="checkbox" id="bannerToggle" checked><span class="tog-bg"></span></label>
     </div>
   </div>
 
-
   <div class="audio-card">
     <h2>Alarm-Audiodatei</h2>
-
     <div class="file-drop" id="fileDrop">
       <input type="file" id="audioFileInput" accept="audio/*">
       <label class="file-drop-label" for="audioFileInput">
@@ -507,25 +217,19 @@
         <small style="font-size:11px;color:var(--text-hint);margin-top:4px;display:block;">MP3, WAV, OGG, M4A ...</small>
       </label>
     </div>
-
     <div class="file-loaded" id="fileLoaded">
       <span class="fname" id="fileName">-</span>
       <button class="btn-preview" id="previewBtn">&#9654; Test</button>
       <button class="btn-remove" id="removeFileBtn" title="Entfernen">&#10005;</button>
     </div>
-
     <div class="ctrl-row">
       <label>Lautstaerke</label>
       <input type="range" id="audioVolSlider" min="0" max="400" value="100" step="5">
-      <span class="val" id="audioVolVal">80</span>
+      <span class="val" id="audioVolVal">100%</span>
     </div>
-
     <div class="toggle-row" style="margin-top:0.25rem;">
-      <label class="lbl">Audiodatei statt Signalton</label>
-      <label class="toggle">
-        <input type="checkbox" id="useFileToggle">
-        <span class="tog-bg"></span>
-      </label>
+      <span class="lbl">Audiodatei statt Signalton</span>
+      <label class="toggle"><input type="checkbox" id="useFileToggle"><span class="tog-bg"></span></label>
     </div>
   </div>
 
@@ -537,136 +241,153 @@
   </div>
 
   <div class="install-hint">
-    📱 Tipp: „Zum Startbildschirm hinzufügen" im Browser-Menü für App-Erlebnis ohne Browser-Leiste.
+    Tipp: "Zum Startbildschirm hinzufuegen" im Browser-Menu fuer App-Erlebnis ohne Browser-Leiste.
   </div>
 
   <script>
-    // --- State ---
-    let audioCtx = null, analyser = null, sourceNode = null, micStream = null;
-    let running = false, animId = null;
-    let lastAlarm = 0;
-    let histData = new Array(120).fill(0);
-    let histTick = 0;
-    let flashTO = null, bannerTO = null;
-    let alarmAudio = null, alarmAudioUrl = null;
-    let alarmAudioSource = null, alarmGainNode = null;
-    let smoothBuffer = [];      // Gleitender Mittelwert-Puffer
-    let smoothedLevel = 0;      // Geglätteter Pegel
+    // =====================================================================
+    // STATE
+    // =====================================================================
+    var audioCtx = null, analyser = null, sourceNode = null, micStream = null;
+    var running = false, animId = null;
+    var lastAlarm = 0;
+    var histData = [];
+    for (var i = 0; i < 120; i++) histData.push(0);
+    var histTick = 0;
+    var flashTO = null, bannerTO = null;
+    var alarmAudio = null, alarmAudioUrl = null;
+    var alarmAudioSource = null, alarmGainNode = null;
+    var smoothBuffer = [];
+    var smoothedLevel = 0;
 
-    // --- DOM ---
-    const dbVal       = document.getElementById('dbVal');
-    const barFill     = document.getElementById('barFill');
-    const threshMarker= document.getElementById('threshMarker');
-    const statusBadge = document.getElementById('statusBadge');
-    const alertBanner = document.getElementById('alertBanner');
-    const mainBtn     = document.getElementById('mainBtn');
-    const histCanvas  = document.getElementById('histCanvas');
-    const hctx        = histCanvas.getContext('2d');
+    // =====================================================================
+    // DOM
+    // =====================================================================
+    var dbVal        = document.getElementById('dbVal');
+    var barFill      = document.getElementById('barFill');
+    var threshMarker = document.getElementById('threshMarker');
+    var statusBadge  = document.getElementById('statusBadge');
+    var alertBanner  = document.getElementById('alertBanner');
+    var mainBtn      = document.getElementById('mainBtn');
+    var histCanvas   = document.getElementById('histCanvas');
+    var hctx         = histCanvas.getContext('2d');
 
-    const threshSlider  = document.getElementById('threshSlider');
-    const sensSlider    = document.getElementById('sensSlider');
-    const cooldownSlider= document.getElementById('cooldownSlider');
-    const threshValEl   = document.getElementById('threshVal');
-    const sensValEl     = document.getElementById('sensVal');
-    const cooldownValEl = document.getElementById('cooldownVal');
-    const smoothSlider  = document.getElementById('smoothSlider');
-    const smoothValEl   = document.getElementById('smoothVal');
-    const soundToggle   = document.getElementById('soundToggle');
-    const flashToggle   = document.getElementById('flashToggle');
-    const bannerToggle  = document.getElementById('bannerToggle');
-    const audioFileInput  = document.getElementById('audioFileInput');
-    const fileDrop        = document.getElementById('fileDrop');
-    const fileLoaded      = document.getElementById('fileLoaded');
-    const fileNameEl      = document.getElementById('fileName');
-    const previewBtn      = document.getElementById('previewBtn');
-    const removeFileBtn   = document.getElementById('removeFileBtn');
-    const audioVolSlider  = document.getElementById('audioVolSlider');
-    const audioVolValEl   = document.getElementById('audioVolVal');
-    const useFileToggle   = document.getElementById('useFileToggle');
+    var threshSlider   = document.getElementById('threshSlider');
+    var sensSlider     = document.getElementById('sensSlider');
+    var cooldownSlider = document.getElementById('cooldownSlider');
+    var smoothSlider   = document.getElementById('smoothSlider');
+    var threshValEl    = document.getElementById('threshVal');
+    var sensValEl      = document.getElementById('sensVal');
+    var cooldownValEl  = document.getElementById('cooldownVal');
+    var smoothValEl    = document.getElementById('smoothVal');
 
-    // --- Controls ---
-    threshSlider.addEventListener('input', () => {
+    var soundToggle   = document.getElementById('soundToggle');
+    var flashToggle   = document.getElementById('flashToggle');
+    var bannerToggle  = document.getElementById('bannerToggle');
+
+    var audioFileInput = document.getElementById('audioFileInput');
+    var fileDrop       = document.getElementById('fileDrop');
+    var fileLoaded     = document.getElementById('fileLoaded');
+    var fileNameEl     = document.getElementById('fileName');
+    var previewBtn     = document.getElementById('previewBtn');
+    var removeFileBtn  = document.getElementById('removeFileBtn');
+    var audioVolSlider = document.getElementById('audioVolSlider');
+    var audioVolValEl  = document.getElementById('audioVolVal');
+    var useFileToggle  = document.getElementById('useFileToggle');
+
+    // =====================================================================
+    // SLIDER EVENTS
+    // =====================================================================
+    threshSlider.addEventListener('input', function() {
       threshValEl.textContent = threshSlider.value;
       threshMarker.style.left = threshSlider.value + '%';
+      saveSettings();
     });
-    sensSlider.addEventListener('input', () => sensValEl.textContent = sensSlider.value);
-    sensValEl.textContent = sensSlider.value;
-    smoothValEl.textContent = (smoothSlider.value / 10).toFixed(1);
-    audioVolValEl.textContent = audioVolSlider.value + '%';
-    audioVolSlider.addEventListener('input', () => {
-      const pct = audioVolSlider.value;
-      audioVolValEl.textContent = pct + '%';
-      if (alarmGainNode) alarmGainNode.gain.value = pct / 100;
+    sensSlider.addEventListener('input', function() {
+      sensValEl.textContent = sensSlider.value;
+      saveSettings();
     });
-    cooldownSlider.addEventListener('input', () => cooldownValEl.textContent = cooldownSlider.value);
-    smoothSlider.addEventListener('input', () => {
-      const secs = (smoothSlider.value / 10).toFixed(1);
-      smoothValEl.textContent = secs;
-      smoothBuffer = []; // Puffer bei Aenderung zuruecksetzen
+    cooldownSlider.addEventListener('input', function() {
+      cooldownValEl.textContent = cooldownSlider.value;
+      saveSettings();
+    });
+    smoothSlider.addEventListener('input', function() {
+      smoothValEl.textContent = (smoothSlider.value / 10).toFixed(1);
+      smoothBuffer = [];
+      saveSettings();
+    });
+    audioVolSlider.addEventListener('input', function() {
+      audioVolValEl.textContent = audioVolSlider.value + '%';
+      if (alarmGainNode) alarmGainNode.gain.value = audioVolSlider.value / 100;
+      saveSettings();
     });
 
-    // Anzahl Frames fuer Mittelung: Slider-Wert / 10 Sekunden * ~60 fps
+    soundToggle.addEventListener('change', saveSettings);
+    flashToggle.addEventListener('change', saveSettings);
+    bannerToggle.addEventListener('change', saveSettings);
+    useFileToggle.addEventListener('change', saveSettings);
+
+    function getThresh()       { return parseInt(threshSlider.value); }
+    function getSens()         { return parseInt(sensSlider.value); }
+    function getCooldown()     { return parseInt(cooldownSlider.value) * 1000; }
     function getSmoothFrames() { return Math.max(1, Math.round((smoothSlider.value / 10) * 60)); }
 
-    function getThresh()   { return parseInt(threshSlider.value); }
-    function getSens()     { return parseInt(sensSlider.value); }
-    function getCooldown() { return parseInt(cooldownSlider.value) * 1000; }
-
-    // --- IndexedDB fuer Audiodatei-Persistenz ---
-    const IDB_NAME    = 'lautstaerke_db';
-    const IDB_STORE   = 'audiofile';
-    const IDB_KEY     = 'alarm';
-    const MAX_BYTES   = 5 * 1024 * 1024;   // 5 MB
-    const MAX_SECS    = 60;
+    // =====================================================================
+    // INDEXEDDB
+    // =====================================================================
+    var IDB_NAME  = 'lautstaerke_db';
+    var IDB_STORE = 'audiofile';
+    var IDB_KEY   = 'alarm';
+    var MAX_BYTES = 5 * 1024 * 1024;
+    var MAX_SECS  = 60;
 
     function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(IDB_NAME, 1);
-        req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
-        req.onsuccess = e => resolve(e.target.result);
-        req.onerror   = e => reject(e.target.error);
+      return new Promise(function(resolve, reject) {
+        var req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = function(e) { e.target.result.createObjectStore(IDB_STORE); };
+        req.onsuccess = function(e) { resolve(e.target.result); };
+        req.onerror   = function(e) { reject(e.target.error); };
       });
     }
 
-    async function saveAudioToDB(file) {
-      const buf = await file.arrayBuffer();
-      const db  = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx  = db.transaction(IDB_STORE, 'readwrite');
-        tx.objectStore(IDB_STORE).put({ name: file.name, type: file.type, data: buf }, IDB_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror    = e => reject(e.target.error);
-      });
-    }
-
-    async function loadAudioFromDB() {
-      try {
-        const db = await openDB();
-        const record = await new Promise((resolve, reject) => {
-          const tx  = db.transaction(IDB_STORE, 'readonly');
-          const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-          req.onsuccess = e => resolve(e.target.result);
-          req.onerror   = e => reject(e.target.error);
+    function saveAudioToDB(file) {
+      return file.arrayBuffer().then(function(buf) {
+        return openDB().then(function(db) {
+          return new Promise(function(resolve, reject) {
+            var tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put({ name: file.name, type: file.type, data: buf }, IDB_KEY);
+            tx.oncomplete = function() { resolve(); };
+            tx.onerror    = function(e) { reject(e.target.error); };
+          });
         });
+      });
+    }
+
+    function loadAudioFromDB() {
+      openDB().then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var tx  = db.transaction(IDB_STORE, 'readonly');
+          var req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+          req.onsuccess = function(e) { resolve(e.target.result); };
+          req.onerror   = function(e) { reject(e.target.error); };
+        });
+      }).then(function(record) {
         if (!record) return;
-        const blob = new Blob([record.data], { type: record.type });
+        var blob = new Blob([record.data], { type: record.type });
         setupAlarmAudio(blob, record.name);
-      } catch(e) { console.warn('IndexedDB laden fehlgeschlagen:', e); }
+      }).catch(function(e) { console.warn('IndexedDB laden fehlgeschlagen:', e); });
     }
 
-    async function deleteAudioFromDB() {
-      try {
-        const db = await openDB();
-        await new Promise((resolve, reject) => {
-          const tx = db.transaction(IDB_STORE, 'readwrite');
-          tx.objectStore(IDB_STORE).delete(IDB_KEY);
-          tx.oncomplete = () => resolve();
-          tx.onerror    = e => reject(e.target.error);
-        });
-      } catch(e) {}
+    function deleteAudioFromDB() {
+      openDB().then(function(db) {
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(IDB_KEY);
+      }).catch(function() {});
     }
 
-    // Kern-Funktion: Audio-Objekt aufbauen (wird von loadAudioFile & loadAudioFromDB genutzt)
+    // =====================================================================
+    // AUDIO SETUP
+    // =====================================================================
     function setupAlarmAudio(blob, name) {
       if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
       if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} alarmAudioSource = null; }
@@ -674,93 +395,65 @@
       alarmAudioUrl = URL.createObjectURL(blob);
       alarmAudio    = new Audio(alarmAudioUrl);
       alarmAudio.crossOrigin = 'anonymous';
-
-      function connectToWebAudio() {
+      alarmAudio._connectFn  = function() {
         if (!audioCtx) return;
         alarmAudioSource = audioCtx.createMediaElementSource(alarmAudio);
         alarmGainNode    = audioCtx.createGain();
         alarmGainNode.gain.value = audioVolSlider.value / 100;
         alarmAudioSource.connect(alarmGainNode);
         alarmGainNode.connect(audioCtx.destination);
-      }
-      connectToWebAudio();
-      alarmAudio._connectFn = connectToWebAudio;
+      };
+      alarmAudio._connectFn();
 
       fileNameEl.textContent = name;
       fileLoaded.classList.add('visible');
       useFileToggle.checked = true;
     }
 
-    // --- Audio File Handling ---
     function loadAudioFile(file) {
       if (!file || !file.type.startsWith('audio/')) {
         alert('Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.');
         return;
       }
-
-      // Groesse pruefen
       if (file.size > MAX_BYTES) {
-        alert('Datei zu gross (>' + (MAX_BYTES/1024/1024).toFixed(0) + ' MB).
-Bitte eine kuerzere Aufnahme verwenden.');
+        alert('Datei zu gross (>' + (MAX_BYTES/1024/1024).toFixed(0) + ' MB).\nBitte eine kuerzere Aufnahme verwenden.');
         return;
       }
-
-      // Laenge pruefen (asynchron, nach dem Laden)
-      const tmpUrl  = URL.createObjectURL(file);
-      const tmpAudio = new Audio(tmpUrl);
-      tmpAudio.addEventListener('loadedmetadata', async () => {
+      var tmpUrl   = URL.createObjectURL(file);
+      var tmpAudio = new Audio(tmpUrl);
+      tmpAudio.addEventListener('loadedmetadata', function() {
         URL.revokeObjectURL(tmpUrl);
-        const dur = tmpAudio.duration;
-        let proceed = true;
+        var dur = tmpAudio.duration;
+        var proceed = true;
         if (dur > MAX_SECS) {
-          proceed = confirm(
-            'Die Audiodatei ist ' + Math.round(dur) + ' Sekunden lang.
-' +
-            'Empfohlen: max. ' + MAX_SECS + ' Sekunden.
-
-' +
-            'Trotzdem laden?'
-          );
+          proceed = confirm('Die Audiodatei ist ' + Math.round(dur) + ' Sekunden lang.\nEmpfohlen: max. ' + MAX_SECS + ' Sekunden.\n\nTrotzdem laden?');
         }
         if (!proceed) return;
-
         setupAlarmAudio(file, file.name);
-
-        // In IndexedDB speichern
-        try {
-          await saveAudioToDB(file);
-        } catch(e) {
-          console.warn('Speichern in IndexedDB fehlgeschlagen:', e);
-        }
+        saveAudioToDB(file).catch(function(e) { console.warn('Speichern fehlgeschlagen:', e); });
       });
-      tmpAudio.addEventListener('error', () => {
+      tmpAudio.addEventListener('error', function() {
         URL.revokeObjectURL(tmpUrl);
         alert('Audiodatei konnte nicht gelesen werden.');
       });
     }
 
-    audioFileInput.addEventListener('change', e => {
+    audioFileInput.addEventListener('change', function(e) {
       if (e.target.files[0]) loadAudioFile(e.target.files[0]);
     });
-
-    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('dragover'); });
-    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
-    fileDrop.addEventListener('drop', e => {
-      e.preventDefault();
-      fileDrop.classList.remove('dragover');
+    fileDrop.addEventListener('dragover', function(e) { e.preventDefault(); fileDrop.classList.add('dragover'); });
+    fileDrop.addEventListener('dragleave', function() { fileDrop.classList.remove('dragover'); });
+    fileDrop.addEventListener('drop', function(e) {
+      e.preventDefault(); fileDrop.classList.remove('dragover');
       if (e.dataTransfer.files[0]) loadAudioFile(e.dataTransfer.files[0]);
     });
-
-    previewBtn.addEventListener('click', () => {
+    previewBtn.addEventListener('click', function() {
       if (!alarmAudio) return;
-      if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) {
-        alarmAudio._connectFn();
-      }
+      if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) alarmAudio._connectFn();
       alarmAudio.currentTime = 0;
-      alarmAudio.play().catch(() => alert('Wiedergabe fehlgeschlagen.'));
+      alarmAudio.play().catch(function() { alert('Wiedergabe fehlgeschlagen.'); });
     });
-
-    removeFileBtn.addEventListener('click', () => {
+    removeFileBtn.addEventListener('click', function() {
       if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} alarmAudioSource = null; }
       if (alarmGainNode)    { try { alarmGainNode.disconnect();    } catch(e) {} alarmGainNode = null; }
       if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
@@ -771,26 +464,16 @@ Bitte eine kuerzere Aufnahme verwenden.');
       deleteAudioFromDB();
     });
 
-    function playAudioFile() {
-      if (!alarmAudio) return;
-      // Web Audio Verbindung herstellen falls audioCtx jetzt verfuegbar
-      if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) {
-        alarmAudio._connectFn();
-      }
-      alarmAudio.currentTime = 0;
-      alarmAudio.play().catch(() => {});
-    }
-
-    // --- Alarm Sound (Web Audio API, kein externes File nötig) ---
+    // =====================================================================
+    // ALARM SOUND (synthetisch)
+    // =====================================================================
     function playAlarmSound() {
       if (!audioCtx) return;
-      const ctx = audioCtx;
-      const now = ctx.currentTime;
-
-      // Zwei-Ton-Alarm
-      [880, 660].forEach((freq, i) => {
-        const osc  = ctx.createOscillator();
-        const gain = ctx.createGain();
+      var ctx = audioCtx;
+      var now = ctx.currentTime;
+      [880, 660].forEach(function(freq, i) {
+        var osc  = ctx.createOscillator();
+        var gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = 'sawtooth';
@@ -803,9 +486,18 @@ Bitte eine kuerzere Aufnahme verwenden.');
       });
     }
 
-    // --- Alarm Trigger ---
+    function playAudioFile() {
+      if (!alarmAudio) return;
+      if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) alarmAudio._connectFn();
+      alarmAudio.currentTime = 0;
+      alarmAudio.play().catch(function() {});
+    }
+
+    // =====================================================================
+    // ALARM TRIGGER
+    // =====================================================================
     function triggerAlarm() {
-      const now = Date.now();
+      var now = Date.now();
       if (now - lastAlarm < getCooldown()) return;
       lastAlarm = now;
 
@@ -813,13 +505,12 @@ Bitte eine kuerzere Aufnahme verwenden.');
         if (alarmAudio) {
           playAudioFile();
         } else {
-          // Datei-Modus aktiv aber keine Datei geladen: Signalton als Fallback + Hinweis
           if (soundToggle.checked) playAlarmSound();
           alertBanner.textContent = '[!] Bitte Audiodatei laden!';
           alertBanner.classList.add('visible');
           clearTimeout(bannerTO);
-          bannerTO = setTimeout(() => {
-            alertBanner.textContent = '[!] Zu laut! Bitte leiser sein.';
+          bannerTO = setTimeout(function() {
+            alertBanner.textContent = 'Zu laut! Bitte leiser sein.';
             alertBanner.classList.remove('visible');
           }, 3000);
         }
@@ -830,95 +521,91 @@ Bitte eine kuerzere Aufnahme verwenden.');
       if (flashToggle.checked) {
         document.body.classList.add('alarm-flash');
         clearTimeout(flashTO);
-        flashTO = setTimeout(() => document.body.classList.remove('alarm-flash'), 2500);
+        flashTO = setTimeout(function() { document.body.classList.remove('alarm-flash'); }, 2500);
       }
 
       if (bannerToggle.checked) {
+        alertBanner.textContent = 'Zu laut! Bitte leiser sein.';
         alertBanner.classList.add('visible');
         clearTimeout(bannerTO);
-        bannerTO = setTimeout(() => alertBanner.classList.remove('visible'), 3000);
+        bannerTO = setTimeout(function() { alertBanner.classList.remove('visible'); }, 3000);
       }
     }
 
-    // --- RMS -> Level (0-100) ---
+    // =====================================================================
+    // PEGEL-BERECHNUNG
+    // =====================================================================
     function rmsToLevel(rms, sens) {
-      const scale = 0.05 + (sens - 1) * 0.15;
-      const normalized = Math.min(rms * scale * 10, 1.0);
-      // Logarithmisch skaliert für natürlicheres Verhalten
-      const log = Math.log10(1 + normalized * 9) / Math.log10(10);
+      var scale      = 0.05 + (sens - 1) * 0.15;
+      var normalized = Math.min(rms * scale * 10, 1.0);
+      var log        = Math.log10(1 + normalized * 9) / Math.log10(10);
       return Math.round(log * 100);
     }
 
-    // --- History Canvas ---
+    // =====================================================================
+    // HISTORY CANVAS
+    // =====================================================================
     function drawHistory() {
-      const w = histCanvas.width;
-      const h = histCanvas.height;
+      var w = histCanvas.width;
+      var h = histCanvas.height;
       hctx.clearRect(0, 0, w, h);
-
-      const thresh = getThresh();
-
-      // Threshold-Linie
+      var thresh = getThresh();
       hctx.strokeStyle = '#E24B4A';
       hctx.lineWidth = 2;
       hctx.setLineDash([6, 4]);
-      const ty = h - (thresh / 100) * h;
-      hctx.beginPath();
-      hctx.moveTo(0, ty);
-      hctx.lineTo(w, ty);
-      hctx.stroke();
+      var ty = h - (thresh / 100) * h;
+      hctx.beginPath(); hctx.moveTo(0, ty); hctx.lineTo(w, ty); hctx.stroke();
       hctx.setLineDash([]);
-
-      // Balken
-      const bw = w / histData.length;
-      for (let i = 0; i < histData.length; i++) {
-        const v = histData[i];
-        const bh = Math.max((v / 100) * h, 1);
-        hctx.fillStyle = v > thresh ? '#E24B4A' : v > thresh * 0.8 ? '#EF9F27' : '#1D9E75';
+      var bw = w / histData.length;
+      for (var i = 0; i < histData.length; i++) {
+        var v  = histData[i];
+        var bh = Math.max((v / 100) * h, 1);
+        hctx.fillStyle  = v > thresh ? '#E24B4A' : (v > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
         hctx.globalAlpha = 0.75;
         hctx.fillRect(i * bw + 1, h - bh, bw - 1.5, bh);
       }
       hctx.globalAlpha = 1;
     }
 
-    // --- Audio Loop ---
+    // =====================================================================
+    // AUDIO LOOP
+    // =====================================================================
     function loop() {
       if (!running) return;
       animId = requestAnimationFrame(loop);
 
-      const bufLen = analyser.frequencyBinCount;
-      const td = new Uint8Array(bufLen);
+      var bufLen = analyser.frequencyBinCount;
+      var td     = new Uint8Array(bufLen);
       analyser.getByteTimeDomainData(td);
 
-      let sum = 0;
-      for (let i = 0; i < bufLen; i++) {
-        const v = (td[i] - 128) / 128;
+      var sum = 0;
+      for (var i = 0; i < bufLen; i++) {
+        var v = (td[i] - 128) / 128;
         sum += v * v;
       }
-      const rms = Math.sqrt(sum / bufLen);
-      const rawLevel = rmsToLevel(rms, getSens());
+      var rms      = Math.sqrt(sum / bufLen);
+      var rawLevel = rmsToLevel(rms, getSens());
 
-      // Gleitender Mittelwert
       smoothBuffer.push(rawLevel);
-      const maxFrames = getSmoothFrames();
+      var maxFrames = getSmoothFrames();
       if (smoothBuffer.length > maxFrames) smoothBuffer.shift();
-      smoothedLevel = Math.round(smoothBuffer.reduce((a, b) => a + b, 0) / smoothBuffer.length);
+      smoothedLevel = 0;
+      for (var j = 0; j < smoothBuffer.length; j++) smoothedLevel += smoothBuffer[j];
+      smoothedLevel = Math.round(smoothedLevel / smoothBuffer.length);
 
-      const level = smoothedLevel;
-      const pct = Math.min(level, 100);
-      const thresh = getThresh();
+      var level  = smoothedLevel;
+      var pct    = Math.min(level, 100);
+      var thresh = getThresh();
 
-      // Anzeige
       dbVal.textContent = level;
-      dbVal.style.color = level > thresh ? '#E24B4A' : (level > thresh * 0.85 ? '#EF9F27' : 'var(--text)');
-      barFill.style.width = pct + '%';
+      dbVal.style.color = level > thresh ? '#E24B4A' : (level > thresh * 0.85 ? '#EF9F27' : '');
+      barFill.style.width      = pct + '%';
       barFill.style.background = pct > thresh ? '#E24B4A' : (pct > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
-
-      statusBadge.className = 'badge ' + (level > thresh ? 'warn' : 'ok');
-      statusBadge.textContent = level > thresh ? 'Zu laut!' : 'OK';
+      statusBadge.className    = 'badge ' + (level > thresh ? 'warn' : 'ok');
+      statusBadge.textContent  = level > thresh ? 'Zu laut!' : 'OK';
 
       if (level > thresh) triggerAlarm();
 
-      // History: alle ~4 Frames = ca. 4× pro Sekunde
       histTick++;
       if (histTick % 4 === 0) {
         histData.push(level);
@@ -927,107 +614,102 @@ Bitte eine kuerzere Aufnahme verwenden.');
       }
     }
 
-    // --- Start / Stop ---
-    async function startMeasurement() {
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
+    // =====================================================================
+    // START / STOP
+    // =====================================================================
+    function startMeasurement() {
+      navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream) {
+        micStream = stream;
+        audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+        analyser  = audioCtx.createAnalyser();
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.85;
-        sourceNode = audioCtx.createMediaStreamSource(micStream);
+        sourceNode = audioCtx.createMediaStreamSource(stream);
         sourceNode.connect(analyser);
-        running = true;
-        histTick = 0;
-        histData = new Array(120).fill(0);
-        mainBtn.textContent = 'Messung stoppen';
-        mainBtn.className = 'btn-main stop';
+        // Web Audio Verbindung fuer geladene Audiodatei herstellen
+        if (alarmAudio && !alarmAudioSource && alarmAudio._connectFn) alarmAudio._connectFn();
+        running   = true;
+        histTick  = 0;
+        histData  = [];
+        for (var i = 0; i < 120; i++) histData.push(0);
+        mainBtn.textContent   = 'Messung stoppen';
+        mainBtn.className     = 'btn-main stop';
         statusBadge.className = 'badge ok';
         statusBadge.textContent = 'Aktiv';
         loop();
-      } catch (err) {
-        alert('Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen für diese Seite erlauben und erneut versuchen.\n\n(' + err.message + ')');
-      }
+      }).catch(function(err) {
+        alert('Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen erlauben.\n\n(' + err.message + ')');
+      });
     }
 
     function stopMeasurement() {
       running = false;
       cancelAnimationFrame(animId);
       if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
-      if (audioCtx)   { audioCtx.close(); audioCtx = null; }
-      if (micStream)  { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      if (audioCtx)   { audioCtx.close(); audioCtx = null; alarmAudioSource = null; }
+      if (micStream)  { micStream.getTracks().forEach(function(t) { t.stop(); }); micStream = null; }
       smoothBuffer = []; smoothedLevel = 0;
-      dbVal.textContent = '--';
-      dbVal.style.color = '';
-      barFill.style.width = '0%';
-      statusBadge.className = 'badge idle';
+      dbVal.textContent    = '--';
+      dbVal.style.color    = '';
+      barFill.style.width  = '0%';
+      statusBadge.className   = 'badge idle';
       statusBadge.textContent = 'Inaktiv';
-      mainBtn.textContent = 'Messung starten';
-      mainBtn.className = 'btn-main start';
+      mainBtn.textContent  = 'Messung starten';
+      mainBtn.className    = 'btn-main start';
       document.body.classList.remove('alarm-flash');
       alertBanner.classList.remove('visible');
     }
 
-    mainBtn.addEventListener('click', () => {
-      if (!running) startMeasurement();
-      else stopMeasurement();
+    mainBtn.addEventListener('click', function() {
+      if (!running) startMeasurement(); else stopMeasurement();
     });
 
-    // --- Einstellungen speichern / laden (localStorage) ---
-    const STORAGE_KEY = 'lautstaerke_settings_v1';
+    // =====================================================================
+    // LOCALSTORAGE - Einstellungen
+    // =====================================================================
+    var STORAGE_KEY = 'lautstaerke_settings_v1';
 
     function saveSettings() {
-      const settings = {
+      var s = {
         threshold:   threshSlider.value,
         sensitivity: sensSlider.value,
         cooldown:    cooldownSlider.value,
         smooth:      smoothSlider.value,
+        audioVol:    audioVolSlider.value,
         sound:       soundToggle.checked,
         flash:       flashToggle.checked,
         banner:      bannerToggle.checked,
-        audioVol:    audioVolSlider.value,
         useFile:     useFileToggle.checked
       };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch(e) {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {}
     }
 
     function loadSettings() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        var raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
-        const s = JSON.parse(raw);
-
+        var s = JSON.parse(raw);
         if (s.threshold   != null) { threshSlider.value   = s.threshold;   threshValEl.textContent   = s.threshold; }
         if (s.sensitivity != null) { sensSlider.value     = s.sensitivity; sensValEl.textContent     = s.sensitivity; }
         if (s.cooldown    != null) { cooldownSlider.value = s.cooldown;    cooldownValEl.textContent = s.cooldown; }
         if (s.smooth      != null) { smoothSlider.value   = s.smooth;      smoothValEl.textContent   = (s.smooth / 10).toFixed(1); }
         if (s.audioVol    != null) { audioVolSlider.value = s.audioVol;    audioVolValEl.textContent = s.audioVol + '%'; }
-        if (s.sound   != null) soundToggle.checked   = s.sound;
-        if (s.flash   != null) flashToggle.checked   = s.flash;
-        if (s.banner  != null) bannerToggle.checked  = s.banner;
-        if (s.useFile != null) useFileToggle.checked = s.useFile;
-
+        if (s.sound  != null) soundToggle.checked  = s.sound;
+        if (s.flash  != null) flashToggle.checked  = s.flash;
+        if (s.banner != null) bannerToggle.checked = s.banner;
+        if (s.useFile!= null) useFileToggle.checked= s.useFile;
         threshMarker.style.left = threshSlider.value + '%';
       } catch(e) {}
     }
 
-    // Bei jeder Aenderung automatisch speichern
-    [threshSlider, sensSlider, cooldownSlider, smoothSlider, audioVolSlider].forEach(el => {
-      el.addEventListener('input', saveSettings);
-    });
-    [soundToggle, flashToggle, bannerToggle, useFileToggle].forEach(el => {
-      el.addEventListener('change', saveSettings);
-    });
-
-    // Einstellungen beim Start laden
+    // =====================================================================
+    // INIT
+    // =====================================================================
     loadSettings();
-
-    // Gespeicherte Audiodatei aus IndexedDB laden
     loadAudioFromDB();
-
-    // Initialen Marker setzen
     threshMarker.style.left = threshSlider.value + '%';
     drawHistory();
+
   </script>
 </body>
 </html>
