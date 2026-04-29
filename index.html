@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#1D9E75">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Lautstaerke">
-  <title>Lautstaerke-Monitor</title>
+  <meta name="apple-mobile-web-app-title" content="Noise Monitor">
+  <title>Noise Monitor</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -34,6 +34,19 @@
       padding: 1.5rem 1rem 3rem; transition: background 0.3s;
     }
     body.alarm-flash { background: var(--red-light) !important; }
+
+    /* Language switcher */
+    .lang-bar {
+      width: 100%; max-width: 360px; display: flex; justify-content: flex-end;
+      gap: 4px; margin-bottom: 0.75rem;
+    }
+    .lang-btn {
+      background: var(--card); border: 0.5px solid var(--border); border-radius: 6px;
+      color: var(--text-muted); font-size: 12px; font-weight: 600; padding: 4px 9px;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .lang-btn.active { background: var(--green); color: white; border-color: var(--green); }
+
     h1 { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 0.2rem; }
     .subtitle { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 1.25rem; }
 
@@ -72,7 +85,7 @@
     .badge.warn { background: var(--red-light); color: var(--red-dark); }
 
     .ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.8rem; }
-    .ctrl-row label { font-size: 13px; color: var(--text-muted); min-width: 100px; }
+    .ctrl-row label { font-size: 13px; color: var(--text-muted); min-width: 105px; }
     .ctrl-row input[type=range] {
       flex: 1; -webkit-appearance: none; appearance: none;
       height: 4px; border-radius: 2px; background: var(--border); outline: none; cursor: pointer;
@@ -132,7 +145,7 @@
     .btn-main {
       width: 100%; max-width: 360px; padding: 16px; border-radius: var(--radius);
       border: none; font-size: 17px; font-weight: 600; cursor: pointer;
-      transition: background 0.2s, transform 0.1s, box-shadow 0.2s; letter-spacing: -0.2px;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
     }
     .btn-main.start { background: var(--green); color: white; box-shadow: 0 4px 14px rgba(29,158,117,0.35); }
     .btn-main.stop  { background: var(--red);   color: white; box-shadow: 0 4px 14px rgba(226,75,74,0.35); }
@@ -151,84 +164,95 @@
 </head>
 <body>
 
-  <h1>&#128266; Lautstaerke-Monitor</h1>
-  <p class="subtitle">Fuer Klassen, Gruppen &amp; Kinder</p>
+  <!-- Language Bar -->
+  <div class="lang-bar">
+    <button class="lang-btn" id="btnDE" onclick="setLang('de')">DE</button>
+    <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="btnFR" onclick="setLang('fr')">FR</button>
+  </div>
 
-  <div id="alertBanner" class="alert-banner">Zu laut! Bitte leiser sein.</div>
+  <h1 id="txtTitle">&#128266; Lautstaerke-Monitor</h1>
+  <p class="subtitle" id="txtSubtitle">Fuer Klassen, Gruppen und Kinder</p>
+
+  <div id="alertBanner" class="alert-banner" id="txtBanner">Zu laut! Bitte leiser sein.</div>
 
   <div class="meter-card">
     <div class="db-display">
       <div class="db-value" id="dbVal">--</div>
-      <div class="db-unit">Lautstaerke-Pegel (relativ, 0-100)</div>
+      <div class="db-unit" id="txtUnit">Lautstaerke-Pegel (relativ, 0-100)</div>
     </div>
     <div class="bar-bg">
       <div class="bar-fill" id="barFill"></div>
       <div class="threshold-marker" id="threshMarker" style="left:70%"></div>
     </div>
-    <div class="bar-zone-labels"><span>Still</span><span>Normal</span><span>Laut</span></div>
+    <div class="bar-zone-labels">
+      <span id="txtZone1">Still</span>
+      <span id="txtZone2">Normal</span>
+      <span id="txtZone3">Laut</span>
+    </div>
     <div class="status-badge-wrap">
       <span class="badge idle" id="statusBadge">Inaktiv</span>
     </div>
   </div>
 
   <div class="settings-card">
-    <h2>Einstellungen</h2>
+    <h2 id="txtSettings">Einstellungen</h2>
     <div class="ctrl-row">
-      <label>Schwellwert</label>
+      <label id="txtThresh">Schwellwert</label>
       <input type="range" id="threshSlider" min="10" max="95" value="70" step="1">
       <span class="val" id="threshVal">70</span>
     </div>
     <div class="ctrl-row">
-      <label>Empfindlichkeit</label>
+      <label id="txtSens">Empfindlichkeit</label>
       <input type="range" id="sensSlider" min="1" max="10" value="4" step="1">
       <span class="val" id="sensVal">4</span>
     </div>
     <div class="ctrl-row">
-      <label>Cooldown (s)</label>
+      <label id="txtCooldown">Cooldown (s)</label>
       <input type="range" id="cooldownSlider" min="2" max="30" value="5" step="1">
       <span class="val" id="cooldownVal">5</span>
     </div>
     <div class="ctrl-row">
-      <label>Mittelung (s)</label>
+      <label id="txtSmooth">Mittelung (s)</label>
       <input type="range" id="smoothSlider" min="1" max="30" value="5" step="1">
       <span class="val" id="smoothVal">0.5</span>
     </div>
     <div class="divider"></div>
     <div class="toggle-row">
-      <span class="lbl">Ton-Alarm</span>
+      <span class="lbl" id="txtSoundAlarm">Ton-Alarm</span>
       <label class="toggle"><input type="checkbox" id="soundToggle" checked><span class="tog-bg"></span></label>
     </div>
     <div class="toggle-row">
-      <span class="lbl">Bild-Alarm (Rot-Flash)</span>
+      <span class="lbl" id="txtFlashAlarm">Bild-Alarm (Rot-Flash)</span>
       <label class="toggle"><input type="checkbox" id="flashToggle" checked><span class="tog-bg"></span></label>
     </div>
     <div class="toggle-row">
-      <span class="lbl">Alarm-Meldung anzeigen</span>
+      <span class="lbl" id="txtBannerAlarm">Alarm-Meldung anzeigen</span>
       <label class="toggle"><input type="checkbox" id="bannerToggle" checked><span class="tog-bg"></span></label>
     </div>
   </div>
 
   <div class="audio-card">
-    <h2>Alarm-Audiodatei</h2>
+    <h2 id="txtAudioTitle">Alarm-Audiodatei</h2>
     <div class="file-drop" id="fileDrop">
       <input type="file" id="audioFileInput" accept="audio/*">
       <label class="file-drop-label" for="audioFileInput">
-        &#127925; <span>Datei auswaehlen</span> oder hierher ziehen<br>
-        <small style="font-size:11px;color:var(--text-hint);margin-top:4px;display:block;">MP3, WAV, OGG, M4A ...</small>
+        &#127925; <span id="txtFileSelect">Datei auswaehlen</span> <span id="txtFileDrop">oder hierher ziehen</span><br>
+        <small style="font-size:11px;color:var(--text-hint);margin-top:4px;display:block;">MP3, WAV, OGG, M4A</small>
       </label>
     </div>
     <div class="file-loaded" id="fileLoaded">
       <span class="fname" id="fileName">-</span>
-      <button class="btn-preview" id="previewBtn">&#9654; Test</button>
+      <button class="btn-preview" id="previewBtn">&#9654; <span id="txtTest">Test</span></button>
       <button class="btn-remove" id="removeFileBtn" title="Entfernen">&#10005;</button>
     </div>
     <div class="ctrl-row">
-      <label>Lautstaerke</label>
+      <label id="txtVolume">Lautstaerke</label>
       <input type="range" id="audioVolSlider" min="0" max="400" value="100" step="5">
       <span class="val" id="audioVolVal">100%</span>
     </div>
     <div class="toggle-row" style="margin-top:0.25rem;">
-      <span class="lbl">Audiodatei statt Signalton</span>
+      <span class="lbl" id="txtUseFile">Audiodatei statt Signalton</span>
       <label class="toggle"><input type="checkbox" id="useFileToggle"><span class="tog-bg"></span></label>
     </div>
   </div>
@@ -236,15 +260,189 @@
   <button class="btn-main start" id="mainBtn">Messung starten</button>
 
   <div class="history-section">
-    <div class="history-title">Verlauf (letzte 60 Sekunden)</div>
+    <div class="history-title" id="txtHistory">Verlauf (letzte 60 Sekunden)</div>
     <canvas id="histCanvas" width="720" height="128"></canvas>
   </div>
 
-  <div class="install-hint">
+  <div class="install-hint" id="txtInstall">
     Tipp: "Zum Startbildschirm hinzufuegen" im Browser-Menu fuer App-Erlebnis ohne Browser-Leiste.
   </div>
 
   <script>
+
+    // =====================================================================
+    // TRANSLATIONS
+    // =====================================================================
+    var T = {
+      de: {
+        title:        "Lautstaerke-Monitor",
+        subtitle:     "Fuer Klassen, Gruppen und Kinder",
+        banner:       "Zu laut! Bitte leiser sein.",
+        bannerNoFile: "Bitte Audiodatei laden!",
+        unit:         "Lautstaerke-Pegel (relativ, 0-100)",
+        zone1: "Still",    zone2: "Normal",    zone3: "Laut",
+        statusIdle:   "Inaktiv",
+        statusOk:     "OK",
+        statusWarn:   "Zu laut!",
+        statusActive: "Aktiv",
+        settings:     "Einstellungen",
+        thresh:       "Schwellwert",
+        sens:         "Empfindlichkeit",
+        cooldown:     "Cooldown (s)",
+        smooth:       "Mittelung (s)",
+        soundAlarm:   "Ton-Alarm",
+        flashAlarm:   "Bild-Alarm (Rot-Flash)",
+        bannerAlarm:  "Alarm-Meldung anzeigen",
+        audioTitle:   "Alarm-Audiodatei",
+        fileSelect:   "Datei auswaehlen",
+        fileDrop:     "oder hierher ziehen",
+        testBtn:      "Test",
+        volume:       "Lautstaerke",
+        useFile:      "Audiodatei statt Signalton",
+        btnStart:     "Messung starten",
+        btnStop:      "Messung stoppen",
+        history:      "Verlauf (letzte 60 Sekunden)",
+        install:      'Tipp: "Zum Startbildschirm hinzufuegen" im Browser-Menu fuer App-Erlebnis.',
+        errMic:       "Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen erlauben.\n\n",
+        errFile:      "Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.",
+        errSize:      "Datei zu gross (>5 MB).\nBitte eine kuerzere Aufnahme verwenden.",
+        errRead:      "Audiodatei konnte nicht gelesen werden.",
+        confirmLong:  " Sekunden lang.\nEmpfohlen: max. 60 Sekunden.\n\nTrotzdem laden?",
+        errPlay:      "Wiedergabe fehlgeschlagen."
+      },
+      en: {
+        title:        "Noise Monitor",
+        subtitle:     "For classes, groups and children",
+        banner:       "Too loud! Please be quieter.",
+        bannerNoFile: "Please load an audio file!",
+        unit:         "Noise level (relative, 0-100)",
+        zone1: "Quiet",   zone2: "Normal",    zone3: "Loud",
+        statusIdle:   "Inactive",
+        statusOk:     "OK",
+        statusWarn:   "Too loud!",
+        statusActive: "Active",
+        settings:     "Settings",
+        thresh:       "Threshold",
+        sens:         "Sensitivity",
+        cooldown:     "Cooldown (s)",
+        smooth:       "Averaging (s)",
+        soundAlarm:   "Sound alarm",
+        flashAlarm:   "Visual alarm (red flash)",
+        bannerAlarm:  "Show alarm message",
+        audioTitle:   "Alarm audio file",
+        fileSelect:   "Choose file",
+        fileDrop:     "or drag here",
+        testBtn:      "Test",
+        volume:       "Volume",
+        useFile:      "Audio file instead of beep",
+        btnStart:     "Start monitoring",
+        btnStop:      "Stop monitoring",
+        history:      "History (last 60 seconds)",
+        install:      'Tip: "Add to home screen" in the browser menu for a full-screen app experience.',
+        errMic:       "Microphone access was denied.\n\nPlease allow it in the browser settings.\n\n",
+        errFile:      "Please select an audio file (MP3, WAV, OGG ...).",
+        errSize:      "File too large (>5 MB).\nPlease use a shorter recording.",
+        errRead:      "Audio file could not be read.",
+        confirmLong:  " seconds long.\nRecommended: max. 60 seconds.\n\nLoad anyway?",
+        errPlay:      "Playback failed."
+      },
+      fr: {
+        title:        "Moniteur de Bruit",
+        subtitle:     "Pour les classes, groupes et enfants",
+        banner:       "Trop bruyant! Parlez moins fort.",
+        bannerNoFile: "Veuillez charger un fichier audio!",
+        unit:         "Niveau sonore (relatif, 0-100)",
+        zone1: "Calme",   zone2: "Normal",    zone3: "Fort",
+        statusIdle:   "Inactif",
+        statusOk:     "OK",
+        statusWarn:   "Trop fort!",
+        statusActive: "Actif",
+        settings:     "Parametres",
+        thresh:       "Seuil",
+        sens:         "Sensibilite",
+        cooldown:     "Delai (s)",
+        smooth:       "Lissage (s)",
+        soundAlarm:   "Alarme sonore",
+        flashAlarm:   "Alarme visuelle (flash rouge)",
+        bannerAlarm:  "Afficher le message d'alarme",
+        audioTitle:   "Fichier audio d'alarme",
+        fileSelect:   "Choisir un fichier",
+        fileDrop:     "ou deposer ici",
+        testBtn:      "Test",
+        volume:       "Volume",
+        useFile:      "Fichier audio au lieu du bip",
+        btnStart:     "Demarrer la mesure",
+        btnStop:      "Arreter la mesure",
+        history:      "Historique (60 dernieres secondes)",
+        install:      'Conseil: "Ajouter a l\'ecran d\'accueil" dans le menu du navigateur.',
+        errMic:       "Acces au microphone refuse.\n\nVeuillez l'autoriser dans les parametres du navigateur.\n\n",
+        errFile:      "Veuillez selectionner un fichier audio (MP3, WAV, OGG ...).",
+        errSize:      "Fichier trop volumineux (>5 Mo).\nUtilisez un enregistrement plus court.",
+        errRead:      "Impossible de lire le fichier audio.",
+        confirmLong:  " secondes.\nRecommande: max. 60 secondes.\n\nCharger quand meme?",
+        errPlay:      "Echec de la lecture."
+      }
+    };
+
+    var currentLang = 'de';
+
+    function detectLang() {
+      var bl = (navigator.language || navigator.userLanguage || 'de').toLowerCase().substring(0, 2);
+      if (bl === 'fr') return 'fr';
+      if (bl === 'en') return 'en';
+      return 'de';
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      var t = T[lang];
+      document.documentElement.lang = lang;
+
+      document.getElementById('txtTitle').textContent      = '&#128266; ' + t.title;
+      document.getElementById('txtTitle').innerHTML        = '&#128266; ' + t.title;
+      document.getElementById('txtSubtitle').textContent   = t.subtitle;
+      document.getElementById('alertBanner').textContent   = t.banner;
+      document.getElementById('txtUnit').textContent       = t.unit;
+      document.getElementById('txtZone1').textContent      = t.zone1;
+      document.getElementById('txtZone2').textContent      = t.zone2;
+      document.getElementById('txtZone3').textContent      = t.zone3;
+      document.getElementById('txtSettings').textContent   = t.settings;
+      document.getElementById('txtThresh').textContent     = t.thresh;
+      document.getElementById('txtSens').textContent       = t.sens;
+      document.getElementById('txtCooldown').textContent   = t.cooldown;
+      document.getElementById('txtSmooth').textContent     = t.smooth;
+      document.getElementById('txtSoundAlarm').textContent = t.soundAlarm;
+      document.getElementById('txtFlashAlarm').textContent = t.flashAlarm;
+      document.getElementById('txtBannerAlarm').textContent= t.bannerAlarm;
+      document.getElementById('txtAudioTitle').textContent = t.audioTitle;
+      document.getElementById('txtFileSelect').textContent = t.fileSelect;
+      document.getElementById('txtFileDrop').textContent   = t.fileDrop;
+      document.getElementById('txtTest').textContent       = t.testBtn;
+      document.getElementById('txtVolume').textContent     = t.volume;
+      document.getElementById('txtUseFile').textContent    = t.useFile;
+      document.getElementById('txtHistory').textContent    = t.history;
+      document.getElementById('txtInstall').textContent    = t.install;
+
+      if (!running) {
+        mainBtn.textContent = t.btnStart;
+      } else {
+        mainBtn.textContent = t.btnStop;
+      }
+
+      if (statusBadge.classList.contains('idle')) statusBadge.textContent = t.statusIdle;
+      if (statusBadge.classList.contains('ok'))   statusBadge.textContent = running ? t.statusActive : t.statusOk;
+      if (statusBadge.classList.contains('warn'))  statusBadge.textContent = t.statusWarn;
+
+      // Lang-Buttons aktualisieren
+      document.getElementById('btnDE').classList.toggle('active', lang === 'de');
+      document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+      document.getElementById('btnFR').classList.toggle('active', lang === 'fr');
+
+      try { localStorage.setItem('lautstaerke_lang', lang); } catch(e) {}
+    }
+
+    function t(key) { return T[currentLang][key] || T['de'][key] || key; }
+
     // =====================================================================
     // STATE
     // =====================================================================
@@ -252,7 +450,7 @@
     var running = false, animId = null;
     var lastAlarm = 0;
     var histData = [];
-    for (var i = 0; i < 120; i++) histData.push(0);
+    for (var _i = 0; _i < 120; _i++) histData.push(0);
     var histTick = 0;
     var flashTO = null, bannerTO = null;
     var alarmAudio = null, alarmAudioUrl = null;
@@ -304,24 +502,20 @@
       saveSettings();
     });
     sensSlider.addEventListener('input', function() {
-      sensValEl.textContent = sensSlider.value;
-      saveSettings();
+      sensValEl.textContent = sensSlider.value; saveSettings();
     });
     cooldownSlider.addEventListener('input', function() {
-      cooldownValEl.textContent = cooldownSlider.value;
-      saveSettings();
+      cooldownValEl.textContent = cooldownSlider.value; saveSettings();
     });
     smoothSlider.addEventListener('input', function() {
       smoothValEl.textContent = (smoothSlider.value / 10).toFixed(1);
-      smoothBuffer = [];
-      saveSettings();
+      smoothBuffer = []; saveSettings();
     });
     audioVolSlider.addEventListener('input', function() {
       audioVolValEl.textContent = audioVolSlider.value + '%';
       if (alarmGainNode) alarmGainNode.gain.value = audioVolSlider.value / 100;
       saveSettings();
     });
-
     soundToggle.addEventListener('change', saveSettings);
     flashToggle.addEventListener('change', saveSettings);
     bannerToggle.addEventListener('change', saveSettings);
@@ -349,7 +543,6 @@
         req.onerror   = function(e) { reject(e.target.error); };
       });
     }
-
     function saveAudioToDB(file) {
       return file.arrayBuffer().then(function(buf) {
         return openDB().then(function(db) {
@@ -362,7 +555,6 @@
         });
       });
     }
-
     function loadAudioFromDB() {
       openDB().then(function(db) {
         return new Promise(function(resolve, reject) {
@@ -375,9 +567,8 @@
         if (!record) return;
         var blob = new Blob([record.data], { type: record.type });
         setupAlarmAudio(blob, record.name);
-      }).catch(function(e) { console.warn('IndexedDB laden fehlgeschlagen:', e); });
+      }).catch(function(e) { console.warn('IndexedDB load failed:', e); });
     }
-
     function deleteAudioFromDB() {
       openDB().then(function(db) {
         var tx = db.transaction(IDB_STORE, 'readwrite');
@@ -391,7 +582,6 @@
     function setupAlarmAudio(blob, name) {
       if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
       if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} alarmAudioSource = null; }
-
       alarmAudioUrl = URL.createObjectURL(blob);
       alarmAudio    = new Audio(alarmAudioUrl);
       alarmAudio.crossOrigin = 'anonymous';
@@ -404,21 +594,14 @@
         alarmGainNode.connect(audioCtx.destination);
       };
       alarmAudio._connectFn();
-
       fileNameEl.textContent = name;
       fileLoaded.classList.add('visible');
       useFileToggle.checked = true;
     }
 
     function loadAudioFile(file) {
-      if (!file || !file.type.startsWith('audio/')) {
-        alert('Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.');
-        return;
-      }
-      if (file.size > MAX_BYTES) {
-        alert('Datei zu gross (>' + (MAX_BYTES/1024/1024).toFixed(0) + ' MB).\nBitte eine kuerzere Aufnahme verwenden.');
-        return;
-      }
+      if (!file || !file.type.startsWith('audio/')) { alert(t('errFile')); return; }
+      if (file.size > MAX_BYTES) { alert(t('errSize')); return; }
       var tmpUrl   = URL.createObjectURL(file);
       var tmpAudio = new Audio(tmpUrl);
       tmpAudio.addEventListener('loadedmetadata', function() {
@@ -426,15 +609,14 @@
         var dur = tmpAudio.duration;
         var proceed = true;
         if (dur > MAX_SECS) {
-          proceed = confirm('Die Audiodatei ist ' + Math.round(dur) + ' Sekunden lang.\nEmpfohlen: max. ' + MAX_SECS + ' Sekunden.\n\nTrotzdem laden?');
+          proceed = confirm('Die Datei ist ' + Math.round(dur) + t('confirmLong'));
         }
         if (!proceed) return;
         setupAlarmAudio(file, file.name);
-        saveAudioToDB(file).catch(function(e) { console.warn('Speichern fehlgeschlagen:', e); });
+        saveAudioToDB(file).catch(function(e) { console.warn('Save failed:', e); });
       });
       tmpAudio.addEventListener('error', function() {
-        URL.revokeObjectURL(tmpUrl);
-        alert('Audiodatei konnte nicht gelesen werden.');
+        URL.revokeObjectURL(tmpUrl); alert(t('errRead'));
       });
     }
 
@@ -451,7 +633,7 @@
       if (!alarmAudio) return;
       if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) alarmAudio._connectFn();
       alarmAudio.currentTime = 0;
-      alarmAudio.play().catch(function() { alert('Wiedergabe fehlgeschlagen.'); });
+      alarmAudio.play().catch(function() { alert(t('errPlay')); });
     });
     removeFileBtn.addEventListener('click', function() {
       if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} alarmAudioSource = null; }
@@ -469,23 +651,17 @@
     // =====================================================================
     function playAlarmSound() {
       if (!audioCtx) return;
-      var ctx = audioCtx;
-      var now = ctx.currentTime;
+      var ctx = audioCtx, now = ctx.currentTime;
       [880, 660].forEach(function(freq, i) {
-        var osc  = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sawtooth';
-        osc.frequency.value = freq;
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sawtooth'; osc.frequency.value = freq;
         gain.gain.setValueAtTime(0.0, now + i * 0.18);
         gain.gain.linearRampToValueAtTime(0.25, now + i * 0.18 + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + 0.18);
-        osc.start(now + i * 0.18);
-        osc.stop(now + i * 0.18 + 0.2);
+        osc.start(now + i * 0.18); osc.stop(now + i * 0.18 + 0.2);
       });
     }
-
     function playAudioFile() {
       if (!alarmAudio) return;
       if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) alarmAudio._connectFn();
@@ -506,26 +682,24 @@
           playAudioFile();
         } else {
           if (soundToggle.checked) playAlarmSound();
-          alertBanner.textContent = '[!] Bitte Audiodatei laden!';
+          alertBanner.textContent = t('bannerNoFile');
           alertBanner.classList.add('visible');
           clearTimeout(bannerTO);
           bannerTO = setTimeout(function() {
-            alertBanner.textContent = 'Zu laut! Bitte leiser sein.';
+            alertBanner.textContent = t('banner');
             alertBanner.classList.remove('visible');
           }, 3000);
         }
       } else if (soundToggle.checked) {
         playAlarmSound();
       }
-
       if (flashToggle.checked) {
         document.body.classList.add('alarm-flash');
         clearTimeout(flashTO);
         flashTO = setTimeout(function() { document.body.classList.remove('alarm-flash'); }, 2500);
       }
-
       if (bannerToggle.checked) {
-        alertBanner.textContent = 'Zu laut! Bitte leiser sein.';
+        alertBanner.textContent = t('banner');
         alertBanner.classList.add('visible');
         clearTimeout(bannerTO);
         bannerTO = setTimeout(function() { alertBanner.classList.remove('visible'); }, 3000);
@@ -533,7 +707,7 @@
     }
 
     // =====================================================================
-    // PEGEL-BERECHNUNG
+    // PEGEL
     // =====================================================================
     function rmsToLevel(rms, sens) {
       var scale      = 0.05 + (sens - 1) * 0.15;
@@ -543,24 +717,20 @@
     }
 
     // =====================================================================
-    // HISTORY CANVAS
+    // HISTORY
     // =====================================================================
     function drawHistory() {
-      var w = histCanvas.width;
-      var h = histCanvas.height;
+      var w = histCanvas.width, h = histCanvas.height;
       hctx.clearRect(0, 0, w, h);
       var thresh = getThresh();
-      hctx.strokeStyle = '#E24B4A';
-      hctx.lineWidth = 2;
-      hctx.setLineDash([6, 4]);
+      hctx.strokeStyle = '#E24B4A'; hctx.lineWidth = 2; hctx.setLineDash([6, 4]);
       var ty = h - (thresh / 100) * h;
       hctx.beginPath(); hctx.moveTo(0, ty); hctx.lineTo(w, ty); hctx.stroke();
       hctx.setLineDash([]);
       var bw = w / histData.length;
       for (var i = 0; i < histData.length; i++) {
-        var v  = histData[i];
-        var bh = Math.max((v / 100) * h, 1);
-        hctx.fillStyle  = v > thresh ? '#E24B4A' : (v > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
+        var v = histData[i], bh = Math.max((v / 100) * h, 1);
+        hctx.fillStyle   = v > thresh ? '#E24B4A' : (v > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
         hctx.globalAlpha = 0.75;
         hctx.fillRect(i * bw + 1, h - bh, bw - 1.5, bh);
       }
@@ -568,44 +738,32 @@
     }
 
     // =====================================================================
-    // AUDIO LOOP
+    // LOOP
     // =====================================================================
     function loop() {
       if (!running) return;
       animId = requestAnimationFrame(loop);
-
       var bufLen = analyser.frequencyBinCount;
-      var td     = new Uint8Array(bufLen);
+      var td = new Uint8Array(bufLen);
       analyser.getByteTimeDomainData(td);
-
       var sum = 0;
-      for (var i = 0; i < bufLen; i++) {
-        var v = (td[i] - 128) / 128;
-        sum += v * v;
-      }
-      var rms      = Math.sqrt(sum / bufLen);
+      for (var i = 0; i < bufLen; i++) { var v = (td[i] - 128) / 128; sum += v * v; }
+      var rms = Math.sqrt(sum / bufLen);
       var rawLevel = rmsToLevel(rms, getSens());
-
       smoothBuffer.push(rawLevel);
       var maxFrames = getSmoothFrames();
       if (smoothBuffer.length > maxFrames) smoothBuffer.shift();
       smoothedLevel = 0;
       for (var j = 0; j < smoothBuffer.length; j++) smoothedLevel += smoothBuffer[j];
       smoothedLevel = Math.round(smoothedLevel / smoothBuffer.length);
-
-      var level  = smoothedLevel;
-      var pct    = Math.min(level, 100);
-      var thresh = getThresh();
-
-      dbVal.textContent = level;
-      dbVal.style.color = level > thresh ? '#E24B4A' : (level > thresh * 0.85 ? '#EF9F27' : '');
+      var level = smoothedLevel, pct = Math.min(level, 100), thresh = getThresh();
+      dbVal.textContent        = level;
+      dbVal.style.color        = level > thresh ? '#E24B4A' : (level > thresh * 0.85 ? '#EF9F27' : '');
       barFill.style.width      = pct + '%';
       barFill.style.background = pct > thresh ? '#E24B4A' : (pct > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
       statusBadge.className    = 'badge ' + (level > thresh ? 'warn' : 'ok');
-      statusBadge.textContent  = level > thresh ? 'Zu laut!' : 'OK';
-
+      statusBadge.textContent  = level > thresh ? t('statusWarn') : t('statusOk');
       if (level > thresh) triggerAlarm();
-
       histTick++;
       if (histTick % 4 === 0) {
         histData.push(level);
@@ -619,27 +777,22 @@
     // =====================================================================
     function startMeasurement() {
       navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream) {
-        micStream = stream;
-        audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
-        analyser  = audioCtx.createAnalyser();
+        micStream  = stream;
+        audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+        analyser   = audioCtx.createAnalyser();
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.85;
         sourceNode = audioCtx.createMediaStreamSource(stream);
         sourceNode.connect(analyser);
-        // Web Audio Verbindung fuer geladene Audiodatei herstellen
         if (alarmAudio && !alarmAudioSource && alarmAudio._connectFn) alarmAudio._connectFn();
-        running   = true;
-        histTick  = 0;
-        histData  = [];
+        running  = true; histTick = 0; histData = [];
         for (var i = 0; i < 120; i++) histData.push(0);
-        mainBtn.textContent   = 'Messung stoppen';
-        mainBtn.className     = 'btn-main stop';
-        statusBadge.className = 'badge ok';
-        statusBadge.textContent = 'Aktiv';
+        mainBtn.textContent     = t('btnStop');
+        mainBtn.className       = 'btn-main stop';
+        statusBadge.className   = 'badge ok';
+        statusBadge.textContent = t('statusActive');
         loop();
-      }).catch(function(err) {
-        alert('Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen erlauben.\n\n(' + err.message + ')');
-      });
+      }).catch(function(err) { alert(t('errMic') + err.message); });
     }
 
     function stopMeasurement() {
@@ -647,15 +800,15 @@
       cancelAnimationFrame(animId);
       if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
       if (audioCtx)   { audioCtx.close(); audioCtx = null; alarmAudioSource = null; }
-      if (micStream)  { micStream.getTracks().forEach(function(t) { t.stop(); }); micStream = null; }
+      if (micStream)  { micStream.getTracks().forEach(function(tk) { tk.stop(); }); micStream = null; }
       smoothBuffer = []; smoothedLevel = 0;
-      dbVal.textContent    = '--';
-      dbVal.style.color    = '';
-      barFill.style.width  = '0%';
+      dbVal.textContent       = '--';
+      dbVal.style.color       = '';
+      barFill.style.width     = '0%';
       statusBadge.className   = 'badge idle';
-      statusBadge.textContent = 'Inaktiv';
-      mainBtn.textContent  = 'Messung starten';
-      mainBtn.className    = 'btn-main start';
+      statusBadge.textContent = t('statusIdle');
+      mainBtn.textContent     = t('btnStart');
+      mainBtn.className       = 'btn-main start';
       document.body.classList.remove('alarm-flash');
       alertBanner.classList.remove('visible');
     }
@@ -665,21 +818,17 @@
     });
 
     // =====================================================================
-    // LOCALSTORAGE - Einstellungen
+    // SETTINGS (localStorage)
     // =====================================================================
     var STORAGE_KEY = 'lautstaerke_settings_v1';
 
     function saveSettings() {
       var s = {
-        threshold:   threshSlider.value,
-        sensitivity: sensSlider.value,
-        cooldown:    cooldownSlider.value,
-        smooth:      smoothSlider.value,
-        audioVol:    audioVolSlider.value,
-        sound:       soundToggle.checked,
-        flash:       flashToggle.checked,
-        banner:      bannerToggle.checked,
-        useFile:     useFileToggle.checked
+        threshold: threshSlider.value, sensitivity: sensSlider.value,
+        cooldown: cooldownSlider.value, smooth: smoothSlider.value,
+        audioVol: audioVolSlider.value, sound: soundToggle.checked,
+        flash: flashToggle.checked, banner: bannerToggle.checked,
+        useFile: useFileToggle.checked
       };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {}
     }
@@ -694,10 +843,10 @@
         if (s.cooldown    != null) { cooldownSlider.value = s.cooldown;    cooldownValEl.textContent = s.cooldown; }
         if (s.smooth      != null) { smoothSlider.value   = s.smooth;      smoothValEl.textContent   = (s.smooth / 10).toFixed(1); }
         if (s.audioVol    != null) { audioVolSlider.value = s.audioVol;    audioVolValEl.textContent = s.audioVol + '%'; }
-        if (s.sound  != null) soundToggle.checked  = s.sound;
-        if (s.flash  != null) flashToggle.checked  = s.flash;
-        if (s.banner != null) bannerToggle.checked = s.banner;
-        if (s.useFile!= null) useFileToggle.checked= s.useFile;
+        if (s.sound  != null) soundToggle.checked   = s.sound;
+        if (s.flash  != null) flashToggle.checked   = s.flash;
+        if (s.banner != null) bannerToggle.checked  = s.banner;
+        if (s.useFile!= null) useFileToggle.checked = s.useFile;
         threshMarker.style.left = threshSlider.value + '%';
       } catch(e) {}
     }
@@ -706,6 +855,12 @@
     // INIT
     // =====================================================================
     loadSettings();
+
+    // Sprache: gespeicherte > Browser > Deutsch
+    var savedLang = null;
+    try { savedLang = localStorage.getItem('lautstaerke_lang'); } catch(e) {}
+    setLang(savedLang || detectLang());
+
     loadAudioFromDB();
     threshMarker.style.left = threshSlider.value + '%';
     drawHistory();
