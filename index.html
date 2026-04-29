@@ -516,7 +516,7 @@
 
     <div class="ctrl-row">
       <label>Lautstaerke</label>
-      <input type="range" id="audioVolSlider" min="0" max="100" value="80" step="1">
+      <input type="range" id="audioVolSlider" min="0" max="400" value="100" step="5">
       <span class="val" id="audioVolVal">80</span>
     </div>
 
@@ -549,6 +549,7 @@
     let histTick = 0;
     let flashTO = null, bannerTO = null;
     let alarmAudio = null, alarmAudioUrl = null;
+    let alarmAudioSource = null, alarmGainNode = null;
     let smoothBuffer = [];      // Gleitender Mittelwert-Puffer
     let smoothedLevel = 0;      // Geglätteter Pegel
 
@@ -591,9 +592,11 @@
     sensSlider.addEventListener('input', () => sensValEl.textContent = sensSlider.value);
     sensValEl.textContent = sensSlider.value;
     smoothValEl.textContent = (smoothSlider.value / 10).toFixed(1);
+    audioVolValEl.textContent = audioVolSlider.value + '%';
     audioVolSlider.addEventListener('input', () => {
-      audioVolValEl.textContent = audioVolSlider.value;
-      if (alarmAudio) alarmAudio.volume = audioVolSlider.value / 100;
+      const pct = audioVolSlider.value;
+      audioVolValEl.textContent = pct + '%';
+      if (alarmGainNode) alarmGainNode.gain.value = pct / 100;
     });
     cooldownSlider.addEventListener('input', () => cooldownValEl.textContent = cooldownSlider.value);
     smoothSlider.addEventListener('input', () => {
@@ -616,9 +619,25 @@
         return;
       }
       if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
+      // Alten Source trennen
+      if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} }
+
       alarmAudioUrl = URL.createObjectURL(file);
       alarmAudio = new Audio(alarmAudioUrl);
-      alarmAudio.volume = audioVolSlider.value / 100;
+      alarmAudio.crossOrigin = 'anonymous';
+
+      // Durch Web Audio API routen fuer Verstaerkung ueber 100%
+      function connectToWebAudio() {
+        if (!audioCtx) return; // audioCtx noch nicht gestartet, wird in playAudioFile nachgeholt
+        alarmAudioSource = audioCtx.createMediaElementSource(alarmAudio);
+        alarmGainNode = audioCtx.createGain();
+        alarmGainNode.gain.value = audioVolSlider.value / 100;
+        alarmAudioSource.connect(alarmGainNode);
+        alarmGainNode.connect(audioCtx.destination);
+      }
+      connectToWebAudio();
+      alarmAudio._connectFn = connectToWebAudio;
+
       fileNameEl.textContent = file.name;
       fileLoaded.classList.add('visible');
       useFileToggle.checked = true;
@@ -638,11 +657,16 @@
 
     previewBtn.addEventListener('click', () => {
       if (!alarmAudio) return;
+      if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) {
+        alarmAudio._connectFn();
+      }
       alarmAudio.currentTime = 0;
       alarmAudio.play().catch(() => alert('Wiedergabe fehlgeschlagen.'));
     });
 
     removeFileBtn.addEventListener('click', () => {
+      if (alarmAudioSource) { try { alarmAudioSource.disconnect(); } catch(e) {} alarmAudioSource = null; }
+      if (alarmGainNode)    { try { alarmGainNode.disconnect();    } catch(e) {} alarmGainNode = null; }
       if (alarmAudioUrl) URL.revokeObjectURL(alarmAudioUrl);
       alarmAudio = null; alarmAudioUrl = null;
       audioFileInput.value = '';
@@ -652,8 +676,11 @@
 
     function playAudioFile() {
       if (!alarmAudio) return;
+      // Web Audio Verbindung herstellen falls audioCtx jetzt verfuegbar
+      if (audioCtx && !alarmAudioSource && alarmAudio._connectFn) {
+        alarmAudio._connectFn();
+      }
       alarmAudio.currentTime = 0;
-      alarmAudio.volume = audioVolSlider.value / 100;
       alarmAudio.play().catch(() => {});
     }
 
@@ -877,7 +904,7 @@
         if (s.sensitivity != null) { sensSlider.value     = s.sensitivity; sensValEl.textContent     = s.sensitivity; }
         if (s.cooldown    != null) { cooldownSlider.value = s.cooldown;    cooldownValEl.textContent = s.cooldown; }
         if (s.smooth      != null) { smoothSlider.value   = s.smooth;      smoothValEl.textContent   = (s.smooth / 10).toFixed(1); }
-        if (s.audioVol    != null) { audioVolSlider.value = s.audioVol;    audioVolValEl.textContent = s.audioVol; }
+        if (s.audioVol    != null) { audioVolSlider.value = s.audioVol;    audioVolValEl.textContent = s.audioVol + '%'; }
         if (s.sound   != null) soundToggle.checked   = s.sound;
         if (s.flash   != null) flashToggle.checked   = s.flash;
         if (s.banner  != null) bannerToggle.checked  = s.banner;
