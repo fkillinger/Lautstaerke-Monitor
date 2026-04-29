@@ -815,11 +815,11 @@ Bitte eine kuerzere Aufnahme verwenden.');
         } else {
           // Datei-Modus aktiv aber keine Datei geladen: Signalton als Fallback + Hinweis
           if (soundToggle.checked) playAlarmSound();
-          alertBanner.textContent = '⚠️ Bitte Audiodatei laden!';
+          alertBanner.textContent = '[!] Bitte Audiodatei laden!';
           alertBanner.classList.add('visible');
           clearTimeout(bannerTO);
           bannerTO = setTimeout(() => {
-            alertBanner.textContent = '⚠️ Zu laut! Bitte leiser sein.';
+            alertBanner.textContent = '[!] Zu laut! Bitte leiser sein.';
             alertBanner.classList.remove('visible');
           }, 3000);
         }
@@ -840,7 +840,7 @@ Bitte eine kuerzere Aufnahme verwenden.');
       }
     }
 
-    // --- RMS → Level (0–100) ---
+    // --- RMS -> Level (0-100) ---
     function rmsToLevel(rms, sens) {
       const scale = 0.05 + (sens - 1) * 0.15;
       const normalized = Math.min(rms * scale * 10, 1.0);
@@ -914,7 +914,7 @@ Bitte eine kuerzere Aufnahme verwenden.');
       barFill.style.background = pct > thresh ? '#E24B4A' : (pct > thresh * 0.8 ? '#EF9F27' : '#1D9E75');
 
       statusBadge.className = 'badge ' + (level > thresh ? 'warn' : 'ok');
-      statusBadge.textContent = level > thresh ? '⚠ Zu laut!' : '✓ OK';
+      statusBadge.textContent = level > thresh ? 'Zu laut!' : 'OK';
 
       if (level > thresh) triggerAlarm();
 
@@ -943,7 +943,7 @@ Bitte eine kuerzere Aufnahme verwenden.');
         mainBtn.textContent = 'Messung stoppen';
         mainBtn.className = 'btn-main stop';
         statusBadge.className = 'badge ok';
-        statusBadge.textContent = '✓ Aktiv';
+        statusBadge.textContent = 'Aktiv';
         loop();
       } catch (err) {
         alert('Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen für diese Seite erlauben und erneut versuchen.\n\n(' + err.message + ')');
