@@ -685,8 +685,20 @@
       if (now - lastAlarm < getCooldown()) return;
       lastAlarm = now;
 
-      if (useFileToggle.checked && alarmAudio) {
-        playAudioFile();
+      if (useFileToggle.checked) {
+        if (alarmAudio) {
+          playAudioFile();
+        } else {
+          // Datei-Modus aktiv aber keine Datei geladen: Signalton als Fallback + Hinweis
+          if (soundToggle.checked) playAlarmSound();
+          alertBanner.textContent = '⚠️ Bitte Audiodatei laden!';
+          alertBanner.classList.add('visible');
+          clearTimeout(bannerTO);
+          bannerTO = setTimeout(() => {
+            alertBanner.textContent = '⚠️ Zu laut! Bitte leiser sein.';
+            alertBanner.classList.remove('visible');
+          }, 3000);
+        }
       } else if (soundToggle.checked) {
         playAlarmSound();
       }
