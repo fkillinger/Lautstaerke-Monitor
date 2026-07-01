@@ -52,10 +52,10 @@
         .tab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
 
         /* PAGES */
-        .pages { flex: 1; overflow: hidden; position: relative; padding-bottom: var(--tabbar-h); }
+        .pages { flex: 1; overflow: hidden; position: relative; }
         .page {
             position: absolute; inset: 0; overflow-y: auto;
-            padding: 1.25rem 1rem 1.5rem;
+            padding: 1.25rem 1rem calc(var(--tabbar-h) + 1.5rem + env(safe-area-inset-bottom));
             display: flex; flex-direction: column; align-items: center;
             opacity: 0; pointer-events: none; transform: translateX(30px);
             transition: opacity 0.22s, transform 0.22s;
@@ -132,6 +132,7 @@
         .badge.idle { background: var(--bg); color: var(--text-muted); }
         .badge.ok   { background: var(--green-light); color: var(--green-dark); }
         .badge.warn { background: var(--red-light); color: var(--red-dark); }
+        .badge.paused { background: var(--bg); color: var(--amber); border: 1px solid var(--amber); }
 
         /* CONTROLS */
         .ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.8rem; }
@@ -220,6 +221,48 @@
         .history-title { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
         #histCanvas { width: 100%; height: 60px; display: block; border-radius: var(--radius-md); background: var(--card); border: 0.5px solid var(--border); }
 
+        /* AMPEL SCREEN */
+        .ampel-dot-wrap {
+            flex: 1; width: 100%; display: flex; align-items: center;
+            justify-content: center; min-height: 0;
+        }
+        .ampel-dot {
+            width: min(84vw, 400px); height: min(84vw, 400px); border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--border); box-shadow: 0 10px 34px rgba(0,0,0,0.18);
+            transition: background 0.35s ease;
+        }
+        .ampel-dot.red    { background: var(--red); }
+        .ampel-timer {
+            font-size: 46px; font-weight: 700; color: #fff;
+            font-variant-numeric: tabular-nums; line-height: 1;
+        }
+        .ampel-dot.idle .ampel-timer { color: var(--text-muted); }
+        .ampel-timer-label {
+            font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9);
+            margin-top: 8px; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;
+        }
+        .ampel-dot.idle .ampel-timer-label { color: var(--text-hint); }
+        .ampel-sub {
+            width: 100%; max-width: 360px; margin-top: 1rem; padding: 10px 14px;
+            background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius-md);
+            font-size: 12px; color: var(--text-hint); text-align: center; line-height: 1.5;
+        }
+        .ampel-controls {
+            width: 100%; max-width: 360px; display: flex; gap: 10px; margin-top: 1.1rem;
+        }
+        .btn-ampel {
+            flex: 1; padding: 13px 6px; border-radius: var(--radius-md); border: none;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: background 0.15s, opacity 0.15s, transform 0.1s, border-color 0.15s;
+        }
+        .btn-ampel:active { transform: scale(0.97); }
+        .btn-ampel:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+        .btn-ampel.start { background: var(--green); color: #fff; }
+        .btn-ampel.stop  { background: var(--red);   color: #fff; }
+        .btn-ampel.hold  { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+        .btn-ampel.hold.active { background: var(--amber); color: #fff; border-color: var(--amber); }
+
         /* INSTALL HINT */
         .install-hint {
             width: 100%; max-width: 360px; margin-top: 0.75rem; padding: 10px 14px;
@@ -272,7 +315,26 @@
         <div class="install-hint" id="txtInstall">Tipp: "Zum Startbildschirm hinzufuegen" im Browser-Menu.</div>
     </div>
 
-    <!-- PAGE 2: SETTINGS -->
+    <!-- PAGE 2: AMPEL -->
+    <div class="page" id="pageAmpel">
+        <div class="page-header">
+            <h1 id="txtAmpelTitle">Ampel</h1>
+        </div>
+        <div class="ampel-dot-wrap">
+            <div class="ampel-dot idle" id="ampelDot">
+                <div class="ampel-timer" id="ampelTimer">00:00</div>
+                <div class="ampel-timer-label" id="ampelTimerLabel">Ruhig seit</div>
+            </div>
+        </div>
+        <div class="ampel-controls">
+            <button class="btn-ampel start" id="ampelStartBtn">Start</button>
+            <button class="btn-ampel hold" id="ampelHoldBtn" disabled>Halte</button>
+            <button class="btn-ampel stop" id="ampelStopBtn" disabled>Stopp</button>
+        </div>
+        <div class="ampel-sub" id="ampelSub">Starte die Messung auf der Monitor-Seite.</div>
+    </div>
+
+    <!-- PAGE 3: SETTINGS -->
     <div class="page" id="pageSettings">
         <div class="page-header" style="margin-top:0.5rem;">
             <h1 id="txtSettingsTitle">&#9881; Einstellungen</h1>
@@ -340,6 +402,15 @@
         </svg>
         <span class="tab-label" id="tabLabelMonitor">Monitor</span>
     </button>
+    <button class="tab-btn" id="tabAmpel" onclick="showPage('ampel')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="2" width="8" height="20" rx="4"/>
+            <circle cx="12" cy="7" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="17" r="1.4" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tab-label" id="tabLabelAmpel">Ampel</span>
+    </button>
     <button class="tab-btn" id="tabSettings" onclick="showPage('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
@@ -380,6 +451,12 @@
             history:"Verlauf (letzte 60 Sekunden)",
             install:'Tipp: "Zum Startbildschirm hinzufuegen" im Browser-Menu.',
             tabMonitor:"Monitor", tabSettings:"Einstellungen",
+            tabAmpel:"Ampel", ampelTitle:"Ampel",
+            ampelQuietLabel:"Ruhig seit", ampelCooldownLabel:"Wartezeit bis Gruen",
+            ampelHint:"Starte die Messung auf der Monitor-Seite.",
+            ampelPausedHint:"Pausiert - zum Fortsetzen erneut \"Halte\" druecken.",
+            ampelBtnStart:"Start", ampelBtnHold:"Halte", ampelBtnResume:"Weiter", ampelBtnStop:"Stopp",
+            statusPaused:"Pausiert",
             errMic:"Mikrofon-Zugriff wurde verweigert.\n\nBitte in den Browser-Einstellungen erlauben.\n\n",
             errFile:"Bitte eine Audiodatei (MP3, WAV, OGG ...) auswaehlen.",
             errSize:"Datei zu gross (>5 MB).\nBitte eine kuerzere Aufnahme verwenden.",
@@ -401,6 +478,12 @@
             history:"History (last 60 seconds)",
             install:'Tip: "Add to home screen" in the browser menu.',
             tabMonitor:"Monitor", tabSettings:"Settings",
+            tabAmpel:"Signal", ampelTitle:"Traffic Light",
+            ampelQuietLabel:"Quiet for", ampelCooldownLabel:"Cooldown until green",
+            ampelHint:"Start the measurement on the Monitor page.",
+            ampelPausedHint:"Paused - press \"Hold\" again to resume.",
+            ampelBtnStart:"Start", ampelBtnHold:"Hold", ampelBtnResume:"Resume", ampelBtnStop:"Stop",
+            statusPaused:"Paused",
             errMic:"Microphone access denied.\n\nPlease allow in browser settings.\n\n",
             errFile:"Please select an audio file (MP3, WAV, OGG ...).",
             errSize:"File too large (>5 MB). Please use a shorter recording.",
@@ -422,6 +505,12 @@
             history:"Historique (60 dernieres secondes)",
             install:'Conseil: "Ajouter a l\'ecran d\'accueil" dans le menu.',
             tabMonitor:"Monitor", tabSettings:"Parametres",
+            tabAmpel:"Feu", ampelTitle:"Feu tricolore",
+            ampelQuietLabel:"Calme depuis", ampelCooldownLabel:"Delai avant le vert",
+            ampelHint:"Demarrez la mesure sur la page Monitor.",
+            ampelPausedHint:"En pause - appuyez de nouveau sur \"Pause\" pour reprendre.",
+            ampelBtnStart:"Demarrer", ampelBtnHold:"Pause", ampelBtnResume:"Reprendre", ampelBtnStop:"Arreter",
+            statusPaused:"En pause",
             errMic:"Acces microphone refuse.\n\nAutorisez dans les parametres.\n\n",
             errFile:"Selectionnez un fichier audio (MP3, WAV, OGG ...).",
             errSize:"Fichier trop grand (>5 Mo). Utilisez un enregistrement plus court.",
@@ -463,6 +552,13 @@
         document.getElementById('txtInstall').textContent      = t('install');
         document.getElementById('tabLabelMonitor').textContent = t('tabMonitor');
         document.getElementById('tabLabelSettings').textContent= t('tabSettings');
+        document.getElementById('txtAmpelTitle').textContent   = t('ampelTitle');
+        document.getElementById('tabLabelAmpel').textContent   = t('tabAmpel');
+        ampelStartBtn.textContent = t('ampelBtnStart');
+        ampelStopBtn.textContent  = t('ampelBtnStop');
+        updateAmpelButtons();
+        updateAmpelSub();
+        if (!running) resetAmpelDisplay();
         mainBtn.textContent = running ? t('btnStop') : t('btnStart');
         if (statusBadge.classList.contains('idle')) statusBadge.textContent = t('statusIdle');
         if (statusBadge.classList.contains('ok'))   statusBadge.textContent = running ? t('statusActive') : t('statusOk');
@@ -478,11 +574,14 @@
     // PAGE NAVIGATION
     // =====================================================================
     function showPage(page) {
-        var from = document.getElementById(page === 'monitor' ? 'pageSettings' : 'pageMonitor');
-        var to   = document.getElementById(page === 'monitor' ? 'pageMonitor'  : 'pageSettings');
+        var ids  = { monitor: 'pageMonitor', ampel: 'pageAmpel', settings: 'pageSettings' };
+        var to   = document.getElementById(ids[page]);
+        var from = document.querySelector('.page.active');
+        if (!to || from === to) return;
         from.classList.remove('active'); from.classList.add('slide-left');
         to.classList.remove('slide-left'); to.classList.add('active');
         document.getElementById('tabMonitor').classList.toggle('active', page === 'monitor');
+        document.getElementById('tabAmpel').classList.toggle('active', page === 'ampel');
         document.getElementById('tabSettings').classList.toggle('active', page === 'settings');
         setTimeout(function() { from.classList.remove('slide-left'); }, 250);
     }
@@ -584,10 +683,16 @@
     var alarmCtx = null;      // Web Audio Context fuer Alarm-Toene
     var silentNode = null;    // stiller Oszillator haelt Context aktiv
     var running = false, animId = null, lastAlarm = 0;
+    var paused = false, pauseStartedAt = 0;
     var histData = []; for (var _i = 0; _i < 120; _i++) histData.push(0);
     var histTick = 0, flashTO = null, bannerTO = null;
     var threshValue = 70;
     var smoothBuffer = [], smoothedLevel = 0;
+
+    // Ampel-Screen: 'green' (inkl. gelb, in Echtzeit) oder 'red' (Cooldown laeuft)
+    var ampelState = 'idle';   // 'idle' | 'green' | 'red'
+    var quietStartTime = Date.now();
+    var cooldownEndTime = 0;
 
     // Aktiver Ton: { type: 'builtin'|'user', id: 't01'|'u_xxx', audio: Audio|null }
     var activeTone = { type: 'builtin', id: 't01', audio: null };
@@ -618,6 +723,13 @@
     var audioVolSlider = document.getElementById('audioVolSlider');
     var audioVolValEl  = document.getElementById('audioVolVal');
     var audioFileInput = document.getElementById('audioFileInput');
+    var ampelDot           = document.getElementById('ampelDot');
+    var ampelTimerEl       = document.getElementById('ampelTimer');
+    var ampelTimerLabelEl  = document.getElementById('ampelTimerLabel');
+    var ampelSubEl         = document.getElementById('ampelSub');
+    var ampelStartBtn      = document.getElementById('ampelStartBtn');
+    var ampelHoldBtn       = document.getElementById('ampelHoldBtn');
+    var ampelStopBtn       = document.getElementById('ampelStopBtn');
 
     // =====================================================================
     // SLIDER EVENTS
@@ -921,11 +1033,158 @@
     }
 
     // =====================================================================
+    // AMPEL-SCREEN
+    // =====================================================================
+    function formatMMSS(ms) {
+        var totalSec = Math.max(0, Math.floor(ms / 1000));
+        var m = Math.floor(totalSec / 60), s = totalSec % 60;
+        return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // Stufenloser Farbverlauf Gruen -> Gelb -> Rot, gesteuert ueber Ankerpunkte
+    // (Anteil vom Schwellwert): 0%=gruen, 80%=hellgruen-gelb, 90%=gelb, 95%=rot-gelb, 100%=rot
+    var COL_GREEN = [29, 158, 117];   // --green  #1D9E75
+    var COL_AMBER = [239, 159, 39];   // --amber  #EF9F27
+    var COL_RED   = [226, 75, 74];    // --red    #E24B4A
+    function mixColor(c1, c2, t) {
+        return [
+            Math.round(c1[0] + (c2[0] - c1[0]) * t),
+            Math.round(c1[1] + (c2[1] - c1[1]) * t),
+            Math.round(c1[2] + (c2[2] - c1[2]) * t)
+        ];
+    }
+    var AMPEL_STOPS = [
+        { r: 0.00, c: COL_GREEN },
+        { r: 0.80, c: mixColor(COL_GREEN, COL_AMBER, 0.5) },
+        { r: 0.90, c: COL_AMBER },
+        { r: 0.95, c: mixColor(COL_AMBER, COL_RED, 0.5) },
+        { r: 1.00, c: COL_RED }
+    ];
+    function ampelGradientColor(ratio) {
+        ratio = Math.max(0, Math.min(1, ratio));
+        for (var i = 0; i < AMPEL_STOPS.length - 1; i++) {
+            var a = AMPEL_STOPS[i], b = AMPEL_STOPS[i + 1];
+            if (ratio <= b.r) {
+                var t = (b.r - a.r) === 0 ? 0 : (ratio - a.r) / (b.r - a.r);
+                var c = mixColor(a.c, b.c, Math.max(0, t));
+                return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+            }
+        }
+        return 'rgb(' + COL_RED[0] + ',' + COL_RED[1] + ',' + COL_RED[2] + ')';
+    }
+
+    function resetAmpelDisplay() {
+        ampelState = 'idle';
+        quietStartTime = Date.now();
+        cooldownEndTime = 0;
+        ampelDot.className = 'ampel-dot idle';
+        ampelDot.style.background = '';
+        ampelTimerEl.textContent = '00:00';
+        ampelTimerLabelEl.textContent = t('ampelQuietLabel');
+        updateAmpelSub();
+    }
+
+    // Zeigt/versteckt den Hinweistext unter den Ampel-Buttons je nach Zustand
+    function updateAmpelSub() {
+        if (!running) {
+            ampelSubEl.textContent = t('ampelHint');
+            ampelSubEl.style.display = 'block';
+        } else if (paused) {
+            ampelSubEl.textContent = t('ampelPausedHint');
+            ampelSubEl.style.display = 'block';
+        } else {
+            ampelSubEl.style.display = 'none';
+        }
+    }
+
+    // Aktiviert/deaktiviert und beschriftet die drei Ampel-Buttons je nach Zustand
+    function updateAmpelButtons() {
+        ampelStartBtn.disabled = running;
+        ampelStopBtn.disabled  = !running;
+        ampelHoldBtn.disabled  = !running;
+        ampelHoldBtn.textContent = paused ? t('ampelBtnResume') : t('ampelBtnHold');
+        ampelHoldBtn.classList.toggle('active', paused);
+    }
+
+    // alarmCtx muss direkt im User-Gesture erstellt werden (Autoplay-Policy) -
+    // daher gemeinsame Start-Funktion fuer mainBtn UND den Ampel-Start-Button
+    function doStart() {
+        if (running) return;
+        try {
+            if (alarmCtx) { try { alarmCtx.close(); } catch(e){} }
+            alarmCtx = new (window.AudioContext || window.webkitAudioContext)();
+            var silentOsc  = alarmCtx.createOscillator();
+            var silentGain = alarmCtx.createGain();
+            silentGain.gain.value = 0.0001;
+            silentOsc.connect(silentGain);
+            silentGain.connect(alarmCtx.destination);
+            silentOsc.start();
+            silentNode = silentOsc;
+        } catch(e) { console.warn('alarmCtx Fehler:', e); }
+        startMeasurement();
+    }
+
+    function doStop() {
+        if (!running) return;
+        stopMeasurement();
+    }
+
+    // Halte/Weiter: pausiert die Auswertung (z.B. waehrend einer Ansage), ohne
+    // die Messung zu beenden. Beim Fortsetzen laeuft der Countup nahtlos weiter.
+    function togglePause() {
+        if (!running) return;
+        if (!paused) {
+            paused = true;
+            pauseStartedAt = Date.now();
+            statusBadge.className = 'badge paused';
+            statusBadge.textContent = t('statusPaused');
+        } else {
+            var pausedDuration = Date.now() - pauseStartedAt;
+            quietStartTime += pausedDuration;
+            if (ampelState === 'red') cooldownEndTime += pausedDuration;
+            paused = false;
+            statusBadge.className = 'badge ok';
+            statusBadge.textContent = t('statusActive');
+        }
+        updateAmpelButtons();
+        updateAmpelSub();
+    }
+
+    function updateAmpel(level, thresh) {
+        var now = Date.now();
+        if (level > thresh) {
+            // Schwelle ueberschritten: rot (an)zeigen, Cooldown (neu) starten
+            cooldownEndTime = now + getCooldown();
+            ampelState = 'red';
+        } else if (ampelState === 'red') {
+            if (now >= cooldownEndTime) {
+                ampelState = 'green';
+                quietStartTime = now;
+            }
+        } else {
+            ampelState = 'green';
+        }
+
+        if (ampelState === 'red') {
+            ampelDot.className = 'ampel-dot red';
+            ampelDot.style.background = '';
+            ampelTimerEl.textContent = formatMMSS(cooldownEndTime - now);
+            ampelTimerLabelEl.textContent = t('ampelCooldownLabel');
+        } else {
+            ampelDot.className = 'ampel-dot';
+            ampelDot.style.background = ampelGradientColor(thresh > 0 ? level / thresh : 0);
+            ampelTimerEl.textContent = formatMMSS(now - quietStartTime);
+            ampelTimerLabelEl.textContent = t('ampelQuietLabel');
+        }
+    }
+
+    // =====================================================================
     // LOOP
     // =====================================================================
     function loop() {
         if (!running) return;
         animId = requestAnimationFrame(loop);
+        if (paused) return; // eingefroren, RAF laeuft aber weiter fuer nahtlose Fortsetzung
         var bufLen = analyser.frequencyBinCount;
         var td = new Uint8Array(bufLen);
         analyser.getByteTimeDomainData(td);
@@ -944,6 +1203,7 @@
         statusBadge.className    = 'badge ' + (level > thresh ? 'warn' : 'ok');
         statusBadge.textContent  = level > thresh ? t('statusWarn') : t('statusOk');
         if (level > thresh) triggerAlarm();
+        updateAmpel(level, thresh);
         histTick++;
         if (histTick % 4 === 0) { histData.push(level); if (histData.length > 120) histData.shift(); drawHistory(); }
     }
@@ -967,6 +1227,10 @@
             statusBadge.className   = 'badge ok';
             statusBadge.textContent = t('statusActive');
             alarmPending = false;
+            paused = false;
+            ampelState = 'green'; quietStartTime = Date.now(); cooldownEndTime = 0;
+            updateAmpelButtons();
+            updateAmpelSub();
             alarmInterval = setInterval(function() {
                 if (alarmPending) {
                     alarmPending = false;
@@ -978,7 +1242,7 @@
     }
 
     function stopMeasurement() {
-        running = false; cancelAnimationFrame(animId);
+        running = false; paused = false; cancelAnimationFrame(animId);
         if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
         if (audioCtx)  { audioCtx.close();  audioCtx = null; }
         // kein alarmCtx
@@ -993,28 +1257,16 @@
         mainBtn.textContent = t('btnStart'); mainBtn.className = 'btn-main start';
         document.body.classList.remove('alarm-flash');
         alertBanner.classList.remove('visible');
+        resetAmpelDisplay();
+        updateAmpelButtons();
     }
 
     mainBtn.addEventListener('click', function() {
-        if (!running) {
-            // alarmCtx HIER im User-Gesture erstellen - einziger sicherer Ort
-            try {
-                if (alarmCtx) { try { alarmCtx.close(); } catch(e){} }
-                alarmCtx = new (window.AudioContext || window.webkitAudioContext)();
-                var silentOsc  = alarmCtx.createOscillator();
-                var silentGain = alarmCtx.createGain();
-                silentGain.gain.value = 0.0001;
-                silentOsc.connect(silentGain);
-                silentGain.connect(alarmCtx.destination);
-                silentOsc.start();
-                silentNode = silentOsc;
-                console.log('alarmCtx erstellt:', alarmCtx.state);
-            } catch(e) { console.warn('alarmCtx Fehler:', e); }
-            startMeasurement();
-        } else {
-            stopMeasurement();
-        }
+        if (!running) doStart(); else doStop();
     });
+    ampelStartBtn.addEventListener('click', doStart);
+    ampelStopBtn.addEventListener('click', doStop);
+    ampelHoldBtn.addEventListener('click', togglePause);
 
     // =====================================================================
     // SETTINGS (localStorage)
